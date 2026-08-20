@@ -31,14 +31,6 @@ import {
 
 import { saveTemplate } from "../services/adminApi";
 
-const SAMPLE = {
-  NAME: "สมชาย ใจดี",
-  SCHOOL: "โรงเรียนเบญจมราชรังสฤษฎิ์ ๒",
-  ACTIVITY: "วันวิทยาศาสตร์",
-  YEAR: "2569",
-  CERT_NO: "SCI-2569-00001"
-};
-
 export default function TemplateDesigner() {
 
   const canvasRef = useRef(null);
@@ -51,9 +43,9 @@ export default function TemplateDesigner() {
   const [fontFamily, setFontFamily] = useState("Prompt");
   const [color, setColor] = useState("#000000");
 
-  /***********************
+  /*************************
    * Canvas
-   ***********************/
+   *************************/
   useEffect(() => {
 
     const canvas = new fabric.Canvas(canvasRef.current, {
@@ -82,9 +74,9 @@ export default function TemplateDesigner() {
 
   }, []);
 
-  /***********************
+  /*************************
    * Auto Save
-   ***********************/
+   *************************/
   useEffect(() => {
 
     const timer = setInterval(() => {
@@ -102,18 +94,18 @@ export default function TemplateDesigner() {
 
   }, []);
 
-  /***********************
+  /*************************
    * Grid
-   ***********************/
+   *************************/
   function drawGrid() {
 
     const canvas = fabricRef.current;
 
     if (!canvas) return;
 
-    const oldGrid = canvas.getObjects().filter(o => o.grid);
-
-    oldGrid.forEach(o => canvas.remove(o));
+    canvas.getObjects()
+      .filter(o => o.grid)
+      .forEach(o => canvas.remove(o));
 
     for (let x = 0; x <= 1123; x += 50) {
 
@@ -147,9 +139,9 @@ export default function TemplateDesigner() {
 
   }
 
-  /***********************
+  /*************************
    * History
-   ***********************/
+   *************************/
   function saveHistory() {
 
     if (!fabricRef.current) return;
@@ -193,27 +185,23 @@ export default function TemplateDesigner() {
 
   }
 
-  /***********************
+  /*************************
    * Text
-   ***********************/
+   *************************/
   function addText(text) {
 
     const canvas = fabricRef.current;
 
     const obj = new fabric.Textbox(text, {
-
       left: 220,
       top: 180,
       width: 650,
-
       fontSize,
       fill: color,
       fontFamily
-
     });
 
     canvas.add(obj);
-
     canvas.setActiveObject(obj);
 
   }
@@ -221,7 +209,6 @@ export default function TemplateDesigner() {
   function updateSelected() {
 
     const canvas = fabricRef.current;
-
     const obj = canvas.getActiveObject();
 
     if (!obj) return;
@@ -236,13 +223,12 @@ export default function TemplateDesigner() {
 
   }
 
-  /***********************
-   * Background
-   ***********************/
+  /*************************
+   * Upload Background
+   *************************/
   function uploadBackground(e) {
 
     const file = e.target.files[0];
-
     if (!file) return;
 
     const reader = new FileReader();
@@ -267,33 +253,35 @@ export default function TemplateDesigner() {
 
   }
 
-  /***********************
+  /*************************
    * Preview
-   ***********************/
+   *************************/
   function previewTemplate() {
 
     const canvas = fabricRef.current;
-
-    canvas.getObjects().forEach(obj => {
-
-      if (!obj.text) return;
-
-      obj.text = obj.text
-        .replaceAll("{{NAME}}", SAMPLE.NAME)
-        .replaceAll("{{SCHOOL}}", SAMPLE.SCHOOL)
-        .replaceAll("{{ACTIVITY}}", SAMPLE.ACTIVITY)
-        .replaceAll("{{YEAR}}", SAMPLE.YEAR)
-        .replaceAll("{{CERT_NO}}", SAMPLE.CERT_NO);
-
-    });
+    if (!canvas) return;
 
     canvas.renderAll();
 
   }
 
-  /***********************
-   * Export
-   ***********************/
+  /*************************
+   * Download Helper
+   *************************/
+  function download(url, name) {
+
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = name;
+
+    a.click();
+
+  }
+
+  /*************************
+   * Export PNG
+   *************************/
   function exportPNG() {
 
     const url = fabricRef.current.toDataURL({
@@ -305,6 +293,9 @@ export default function TemplateDesigner() {
 
   }
 
+  /*************************
+   * Export JPEG
+   *************************/
   function exportJPEG() {
 
     const url = fabricRef.current.toDataURL({
@@ -316,6 +307,9 @@ export default function TemplateDesigner() {
 
   }
 
+  /*************************
+   * Export PDF
+   *************************/
   function exportPDF() {
 
     const url = fabricRef.current.toDataURL({
@@ -329,36 +323,31 @@ export default function TemplateDesigner() {
       format: [1123, 794]
     });
 
-    pdf.addImage(url, "PNG", 0, 0, 1123, 794);
+    pdf.addImage(
+      url,
+      "PNG",
+      0,
+      0,
+      1123,
+      794
+    );
 
     pdf.save("certificate.pdf");
 
   }
 
-  function download(url, name) {
-
-    const a = document.createElement("a");
-
-    a.href = url;
-    a.download = name;
-
-    a.click();
-
-  }
-
-  /***********************
+  /*************************
    * Save Template
-   ***********************/
+   *************************/
   async function saveCurrentTemplate() {
 
     try {
 
       await saveTemplate({
 
-        activity: "วันวิทยาศาสตร์",
-        prefix: "SCI",
+        activity: "",
+        prefix: "",
         templateId: "designer-" + Date.now(),
-
         json: JSON.stringify(
           fabricRef.current.toJSON()
         )
@@ -413,7 +402,7 @@ export default function TemplateDesigner() {
               variant="outlined"
               startIcon={<Upload />}
             >
-              พื้นหลัง
+              อัปโหลดพื้นหลัง
 
               <input
                 hidden
@@ -432,6 +421,10 @@ export default function TemplateDesigner() {
               เพิ่มข้อความ
             </Button>
 
+            <Typography variant="subtitle2">
+              ตัวแปร
+            </Typography>
+
             {[
               "{{NAME}}",
               "{{SCHOOL}}",
@@ -442,8 +435,8 @@ export default function TemplateDesigner() {
 
               <Button
                 key={v}
-                variant="outlined"
                 size="small"
+                variant="outlined"
                 onClick={() => addText(v)}
               >
                 {v}
@@ -460,12 +453,20 @@ export default function TemplateDesigner() {
               <Select
                 value={fontFamily}
                 label="ฟอนต์"
-                onChange={(e) => setFontFamily(e.target.value)}
+                onChange={e => setFontFamily(e.target.value)}
               >
 
-                <MenuItem value="Prompt">Prompt</MenuItem>
-                <MenuItem value="Sarabun">Sarabun</MenuItem>
-                <MenuItem value="Kanit">Kanit</MenuItem>
+                <MenuItem value="Prompt">
+                  Prompt
+                </MenuItem>
+
+                <MenuItem value="Sarabun">
+                  Sarabun
+                </MenuItem>
+
+                <MenuItem value="Kanit">
+                  Kanit
+                </MenuItem>
 
               </Select>
 
@@ -485,7 +486,7 @@ export default function TemplateDesigner() {
             <TextField
               type="color"
               value={color}
-              onChange={(e) => setColor(e.target.value)}
+              onChange={e => setColor(e.target.value)}
             />
 
             <Button
@@ -567,7 +568,9 @@ export default function TemplateDesigner() {
           }}
         >
 
-          <canvas ref={canvasRef} />
+          <Box sx={{ overflow: "auto" }}>
+            <canvas ref={canvasRef} />
+          </Box>
 
         </Paper>
 
