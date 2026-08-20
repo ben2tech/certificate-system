@@ -6,7 +6,7 @@ import Verify from "./student/pages/Verify";
 
 // Admin
 import Dashboard from "./admin/pages/Dashboard";
-import Login from "./admin/pages/Login";
+import Login from "./admin/pages/Login.jsx";
 import TemplateDesigner from "./admin/pages/TemplateDesigner";
 import TemplateManager from "./admin/pages/TemplateManager";
 
