@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { fabric } from "fabric";
+import * as fabric from "fabric";
 import { jsPDF } from "jspdf";
 
 import {
@@ -32,7 +32,6 @@ import {
 import { saveTemplate } from "../services/adminApi";
 
 export default function TemplateDesigner() {
-
   const canvasRef = useRef(null);
   const fabricRef = useRef(null);
 
@@ -43,11 +42,7 @@ export default function TemplateDesigner() {
   const [fontFamily, setFontFamily] = useState("Prompt");
   const [color, setColor] = useState("#000000");
 
-  /*************************
-   * Canvas
-   *************************/
   useEffect(() => {
-
     const canvas = new fabric.Canvas(canvasRef.current, {
       width: 1123,
       height: 794,
@@ -58,6 +53,7 @@ export default function TemplateDesigner() {
     fabricRef.current = canvas;
 
     drawGrid();
+    saveHistory();
 
     const saved = localStorage.getItem("autosave-template");
 
@@ -65,42 +61,27 @@ export default function TemplateDesigner() {
       canvas.loadFromJSON(saved, () => canvas.renderAll());
     }
 
-    saveHistory();
-
-    canvas.on("object:modified", saveHistory);
     canvas.on("object:added", saveHistory);
+    canvas.on("object:modified", saveHistory);
 
     return () => canvas.dispose();
-
   }, []);
 
-  /*************************
-   * Auto Save
-   *************************/
   useEffect(() => {
-
     const timer = setInterval(() => {
-
       if (!fabricRef.current) return;
 
       localStorage.setItem(
         "autosave-template",
         JSON.stringify(fabricRef.current.toJSON())
       );
-
     }, 5000);
 
     return () => clearInterval(timer);
-
   }, []);
 
-  /*************************
-   * Grid
-   *************************/
   function drawGrid() {
-
     const canvas = fabricRef.current;
-
     if (!canvas) return;
 
     canvas.getObjects()
@@ -108,56 +89,39 @@ export default function TemplateDesigner() {
       .forEach(o => canvas.remove(o));
 
     for (let x = 0; x <= 1123; x += 50) {
-
-      canvas.add(new fabric.Line(
-        [x, 0, x, 794],
-        {
+      canvas.add(
+        new fabric.Line([x, 0, x, 794], {
           stroke: "#eeeeee",
           selectable: false,
           evented: false,
           grid: true
-        }
-      ));
-
+        })
+      );
     }
 
     for (let y = 0; y <= 794; y += 50) {
-
-      canvas.add(new fabric.Line(
-        [0, y, 1123, y],
-        {
+      canvas.add(
+        new fabric.Line([0, y, 1123, y], {
           stroke: "#eeeeee",
           selectable: false,
           evented: false,
           grid: true
-        }
-      ));
-
+        })
+      );
     }
 
     canvas.renderAll();
-
   }
 
-  /*************************
-   * History
-   *************************/
   function saveHistory() {
-
     if (!fabricRef.current) return;
 
-    history.current.push(
-      JSON.stringify(fabricRef.current.toJSON())
-    );
+    history.current.push(JSON.stringify(fabricRef.current.toJSON()));
 
-    if (history.current.length > 30) {
-      history.current.shift();
-    }
-
+    if (history.current.length > 30) history.current.shift();
   }
 
   function undo() {
-
     if (history.current.length < 2) return;
 
     const canvas = fabricRef.current;
@@ -168,11 +132,9 @@ export default function TemplateDesigner() {
       history.current[history.current.length - 1],
       () => canvas.renderAll()
     );
-
   }
 
   function redo() {
-
     if (!redoStack.current.length) return;
 
     const canvas = fabricRef.current;
@@ -182,14 +144,9 @@ export default function TemplateDesigner() {
     history.current.push(json);
 
     canvas.loadFromJSON(json, () => canvas.renderAll());
-
   }
 
-  /*************************
-   * Text
-   *************************/
   function addText(text) {
-
     const canvas = fabricRef.current;
 
     const obj = new fabric.Textbox(text, {
@@ -203,11 +160,9 @@ export default function TemplateDesigner() {
 
     canvas.add(obj);
     canvas.setActiveObject(obj);
-
   }
 
   function updateSelected() {
-
     const canvas = fabricRef.current;
     const obj = canvas.getActiveObject();
 
@@ -220,23 +175,16 @@ export default function TemplateDesigner() {
     });
 
     canvas.renderAll();
-
   }
 
-  /*************************
-   * Upload Background
-   *************************/
   function uploadBackground(e) {
-
     const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
 
     reader.onload = () => {
-
       fabric.Image.fromURL(reader.result, img => {
-
         img.scaleToWidth(1123);
         img.scaleToHeight(794);
 
@@ -244,74 +192,44 @@ export default function TemplateDesigner() {
           img,
           fabricRef.current.renderAll.bind(fabricRef.current)
         );
-
       });
-
     };
 
     reader.readAsDataURL(file);
-
   }
 
-  /*************************
-   * Preview
-   *************************/
   function previewTemplate() {
-
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-
-    canvas.renderAll();
-
+    fabricRef.current?.renderAll();
   }
 
-  /*************************
-   * Download Helper
-   *************************/
   function download(url, name) {
-
     const a = document.createElement("a");
-
     a.href = url;
     a.download = name;
-
     a.click();
-
   }
 
-  /*************************
-   * Export PNG
-   *************************/
   function exportPNG() {
-
-    const url = fabricRef.current.toDataURL({
-      format: "png",
-      quality: 1
-    });
-
-    download(url, "certificate.png");
-
+    download(
+      fabricRef.current.toDataURL({
+        format: "png",
+        quality: 1
+      }),
+      "certificate.png"
+    );
   }
 
-  /*************************
-   * Export JPEG
-   *************************/
   function exportJPEG() {
-
-    const url = fabricRef.current.toDataURL({
-      format: "jpeg",
-      quality: 1
-    });
-
-    download(url, "certificate.jpg");
-
+    download(
+      fabricRef.current.toDataURL({
+        format: "jpeg",
+        quality: 1
+      }),
+      "certificate.jpg"
+    );
   }
 
-  /*************************
-   * Export PDF
-   *************************/
   function exportPDF() {
-
     const url = fabricRef.current.toDataURL({
       format: "png",
       quality: 1
@@ -323,80 +241,38 @@ export default function TemplateDesigner() {
       format: [1123, 794]
     });
 
-    pdf.addImage(
-      url,
-      "PNG",
-      0,
-      0,
-      1123,
-      794
-    );
-
+    pdf.addImage(url, "PNG", 0, 0, 1123, 794);
     pdf.save("certificate.pdf");
-
   }
 
-  /*************************
-   * Save Template
-   *************************/
   async function saveCurrentTemplate() {
-
     try {
-
       await saveTemplate({
-
         activity: "",
         prefix: "",
         templateId: "designer-" + Date.now(),
-        json: JSON.stringify(
-          fabricRef.current.toJSON()
-        )
-
+        json: JSON.stringify(fabricRef.current.toJSON())
       });
 
       alert("บันทึก Template สำเร็จ");
-
     } catch (err) {
-
       alert(err.message);
-
     }
-
   }
 
   return (
-
     <Box>
-
-      <Typography
-        variant="h4"
-        fontWeight={700}
-        mb={3}
-      >
+      <Typography variant="h4" fontWeight={700} mb={3}>
         🎨 Template Designer
       </Typography>
 
-      <Stack
-        direction={{ xs: "column", lg: "row" }}
-        spacing={3}
-      >
-
-        <Paper
-          sx={{
-            width: { lg: 320 },
-            p: 2,
-            borderRadius: 4
-          }}
-        >
-
-          <Typography fontWeight={700}>
-            เครื่องมือ
-          </Typography>
+      <Stack direction={{ xs: "column", lg: "row" }} spacing={3}>
+        <Paper sx={{ width: { lg: 320 }, p: 2, borderRadius: 4 }}>
+          <Typography fontWeight={700}>เครื่องมือ</Typography>
 
           <Divider sx={{ my: 2 }} />
 
           <Stack spacing={2}>
-
             <Button
               component="label"
               variant="outlined"
@@ -410,7 +286,6 @@ export default function TemplateDesigner() {
                 accept="image/*"
                 onChange={uploadBackground}
               />
-
             </Button>
 
             <Button
@@ -421,9 +296,7 @@ export default function TemplateDesigner() {
               เพิ่มข้อความ
             </Button>
 
-            <Typography variant="subtitle2">
-              ตัวแปร
-            </Typography>
+            <Typography variant="subtitle2">ตัวแปร</Typography>
 
             {[
               "{{NAME}}",
@@ -432,7 +305,6 @@ export default function TemplateDesigner() {
               "{{YEAR}}",
               "{{CERT_NO}}"
             ].map(v => (
-
               <Button
                 key={v}
                 size="small"
@@ -441,13 +313,11 @@ export default function TemplateDesigner() {
               >
                 {v}
               </Button>
-
             ))}
 
             <Divider />
 
             <FormControl fullWidth>
-
               <InputLabel>ฟอนต์</InputLabel>
 
               <Select
@@ -455,26 +325,13 @@ export default function TemplateDesigner() {
                 label="ฟอนต์"
                 onChange={e => setFontFamily(e.target.value)}
               >
-
-                <MenuItem value="Prompt">
-                  Prompt
-                </MenuItem>
-
-                <MenuItem value="Sarabun">
-                  Sarabun
-                </MenuItem>
-
-                <MenuItem value="Kanit">
-                  Kanit
-                </MenuItem>
-
+                <MenuItem value="Prompt">Prompt</MenuItem>
+                <MenuItem value="Sarabun">Sarabun</MenuItem>
+                <MenuItem value="Kanit">Kanit</MenuItem>
               </Select>
-
             </FormControl>
 
-            <Typography>
-              ขนาด {fontSize}
-            </Typography>
+            <Typography>ขนาด {fontSize}</Typography>
 
             <Slider
               value={fontSize}
@@ -489,17 +346,13 @@ export default function TemplateDesigner() {
               onChange={e => setColor(e.target.value)}
             />
 
-            <Button
-              variant="outlined"
-              onClick={updateSelected}
-            >
+            <Button variant="outlined" onClick={updateSelected}>
               ใช้กับข้อความที่เลือก
             </Button>
 
             <Divider />
 
             <Stack direction="row" spacing={1}>
-
               <IconButton onClick={undo}>
                 <Undo />
               </IconButton>
@@ -511,7 +364,6 @@ export default function TemplateDesigner() {
               <IconButton onClick={drawGrid}>
                 <GridOn />
               </IconButton>
-
             </Stack>
 
             <Button
@@ -554,9 +406,7 @@ export default function TemplateDesigner() {
             >
               บันทึก Template
             </Button>
-
           </Stack>
-
         </Paper>
 
         <Paper
@@ -567,17 +417,11 @@ export default function TemplateDesigner() {
             overflow: "auto"
           }}
         >
-
           <Box sx={{ overflow: "auto" }}>
             <canvas ref={canvasRef} />
           </Box>
-
         </Paper>
-
       </Stack>
-
     </Box>
-
   );
-
 }
