@@ -6,7 +6,7 @@ import Verify from "./student/pages/Verify";
 
 // Admin
 import Dashboard from "./admin/pages/Dashboard";
-import Login from "./admin/pages/login.jsx";
+import Login from "./admin/pages/Login";
 import TemplateDesigner from "./admin/pages/TemplateDesigner";
 import TemplateManager from "./admin/pages/TemplateManager";
 
@@ -19,11 +19,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* นักเรียน */}
         <Route path="/" element={<Search />} />
         <Route path="/verify" element={<Verify />} />
 
-        {/* Admin */}
         <Route path="/admin/login" element={<Login />} />
 
         <Route
