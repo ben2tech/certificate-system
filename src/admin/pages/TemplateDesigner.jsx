@@ -1,0 +1,571 @@
+import { useEffect, useRef, useState } from "react";
+import * as fabric from "fabric";
+import { jsPDF } from "jspdf";
+
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  Stack,
+  Slider,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  IconButton,
+  Divider,
+  TextField
+} from "@mui/material";
+
+import {
+  Upload,
+  Undo,
+  Redo,
+  Save,
+  Download,
+  GridOn,
+  TextFields,
+  Preview
+} from "@mui/icons-material";
+
+import AdminLayout from "../components/AdminLayout";
+import { saveTemplate } from "../services/adminApi";
+
+export default function TemplateDesigner() {
+
+  const canvasRef = useRef(null);
+  const fabricRef = useRef(null);
+
+  const history = useRef([]);
+  const redoStack = useRef([]);
+
+  const [fontSize, setFontSize] = useState(34);
+  const [fontFamily, setFontFamily] = useState("Prompt");
+  const [color, setColor] = useState("#000000");
+
+  /**********************
+   * Create Canvas
+   **********************/
+  useEffect(() => {
+
+    const canvas = new fabric.Canvas(canvasRef.current, {
+      width: 1123,
+      height: 794,
+      backgroundColor: "#ffffff",
+      preserveObjectStacking: true
+    });
+
+    fabricRef.current = canvas;
+
+    drawGrid();
+    saveHistory();
+
+    const saved = localStorage.getItem("autosave-template");
+
+    if (saved) {
+      canvas.loadFromJSON(saved, () => canvas.renderAll());
+    }
+
+    canvas.on("object:added", saveHistory);
+    canvas.on("object:modified", saveHistory);
+
+    return () => canvas.dispose();
+
+  }, []);
+
+  /**********************
+   * Auto Save
+   **********************/
+  useEffect(() => {
+
+    const timer = setInterval(() => {
+
+      if (!fabricRef.current) return;
+
+      localStorage.setItem(
+        "autosave-template",
+        JSON.stringify(fabricRef.current.toJSON())
+      );
+
+    }, 5000);
+
+    return () => clearInterval(timer);
+
+  }, []);
+
+  /**********************
+   * Grid
+   **********************/
+  function drawGrid() {
+
+    const canvas = fabricRef.current;
+
+    if (!canvas) return;
+
+    canvas.getObjects()
+      .filter(o => o.grid)
+      .forEach(o => canvas.remove(o));
+
+    for (let x = 0; x <= 1123; x += 50) {
+
+      canvas.add(new fabric.Line(
+        [x, 0, x, 794],
+        {
+          stroke: "#eeeeee",
+          selectable: false,
+          evented: false,
+          grid: true
+        }
+      ));
+
+    }
+
+    for (let y = 0; y <= 794; y += 50) {
+
+      canvas.add(new fabric.Line(
+        [0, y, 1123, y],
+        {
+          stroke: "#eeeeee",
+          selectable: false,
+          evented: false,
+          grid: true
+        }
+      ));
+
+    }
+
+    canvas.renderAll();
+
+  }
+
+  /**********************
+   * History
+   **********************/
+  function saveHistory() {
+
+    if (!fabricRef.current) return;
+
+    history.current.push(
+      JSON.stringify(fabricRef.current.toJSON())
+    );
+
+    if (history.current.length > 30) {
+      history.current.shift();
+    }
+
+  }
+
+  function undo() {
+
+    if (history.current.length < 2) return;
+
+    const canvas = fabricRef.current;
+
+    redoStack.current.push(history.current.pop());
+
+    canvas.loadFromJSON(
+      history.current[history.current.length - 1],
+      () => canvas.renderAll()
+    );
+
+  }
+
+  function redo() {
+
+    if (!redoStack.current.length) return;
+
+    const canvas = fabricRef.current;
+
+    const json = redoStack.current.pop();
+
+    history.current.push(json);
+
+    canvas.loadFromJSON(json, () => canvas.renderAll());
+
+  }
+
+  /**********************
+   * Text
+   **********************/
+  function addText(text) {
+
+    const canvas = fabricRef.current;
+
+    const obj = new fabric.Textbox(text, {
+      left: 220,
+      top: 180,
+      width: 650,
+      fontSize,
+      fill: color,
+      fontFamily
+    });
+
+    canvas.add(obj);
+    canvas.setActiveObject(obj);
+
+  }
+
+  function updateSelected() {
+
+    const canvas = fabricRef.current;
+
+    const obj = canvas.getActiveObject();
+
+    if (!obj) return;
+
+    obj.set({
+      fontSize,
+      fill: color,
+      fontFamily
+    });
+
+    canvas.renderAll();
+
+  }
+
+  /**********************
+   * Background
+   **********************/
+  function uploadBackground(e) {
+
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+
+      fabric.FabricImage.fromURL(reader.result)
+        .then(img => {
+
+          img.scaleToWidth(1123);
+          img.scaleToHeight(794);
+
+          fabricRef.current.backgroundImage = img;
+          fabricRef.current.renderAll();
+
+        });
+
+    };
+
+    reader.readAsDataURL(file);
+
+  }
+
+  /**********************
+   * Preview
+   **********************/
+  function previewTemplate() {
+
+    fabricRef.current?.renderAll();
+
+  }
+
+  /**********************
+   * Download Helper
+   **********************/
+  function download(url, name) {
+
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = name;
+
+    a.click();
+
+  }
+
+  /**********************
+   * Export
+   **********************/
+  function exportPNG() {
+
+    download(
+      fabricRef.current.toDataURL({
+        format: "png",
+        quality: 1
+      }),
+      "certificate.png"
+    );
+
+  }
+
+  function exportJPEG() {
+
+    download(
+      fabricRef.current.toDataURL({
+        format: "jpeg",
+        quality: 1
+      }),
+      "certificate.jpg"
+    );
+
+  }
+
+  function exportPDF() {
+
+    const url = fabricRef.current.toDataURL({
+      format: "png",
+      quality: 1
+    });
+
+    const pdf = new jsPDF({
+      orientation: "landscape",
+      unit: "px",
+      format: [1123, 794]
+    });
+
+    pdf.addImage(url, "PNG", 0, 0, 1123, 794);
+
+    pdf.save("certificate.pdf");
+
+  }
+
+  /**********************
+   * Save Template
+   **********************/
+  async function saveCurrentTemplate() {
+
+    try {
+
+      await saveTemplate({
+
+        activity: "",
+        prefix: "",
+        templateId: "designer-" + Date.now(),
+
+        json: JSON.stringify(
+          fabricRef.current.toJSON()
+        )
+
+      });
+
+      alert("บันทึก Template สำเร็จ");
+
+    } catch (err) {
+
+      alert(err.message);
+
+    }
+
+  }
+
+  return (
+
+    <AdminLayout>
+
+      <Box>
+
+        <Typography
+          variant="h4"
+          fontWeight={700}
+          mb={3}
+        >
+          🎨 Template Designer
+        </Typography>
+
+        <Stack
+          direction={{ xs: "column", lg: "row" }}
+          spacing={3}
+        >
+
+          {/* Toolbar */}
+
+          <Paper
+            sx={{
+              width: { lg: 320 },
+              p: 2,
+              borderRadius: 4
+            }}
+          >
+
+            <Typography fontWeight={700}>
+              เครื่องมือ
+            </Typography>
+
+            <Divider sx={{ my: 2 }} />
+
+            <Stack spacing={2}>
+
+              <Button
+                component="label"
+                variant="outlined"
+                startIcon={<Upload />}
+              >
+                อัปโหลดพื้นหลัง
+
+                <input
+                  hidden
+                  type="file"
+                  accept="image/*"
+                  onChange={uploadBackground}
+                />
+
+              </Button>
+
+              <Button
+                variant="contained"
+                startIcon={<TextFields />}
+                onClick={() => addText("ข้อความ")}
+              >
+                เพิ่มข้อความ
+              </Button>
+
+              <Typography variant="subtitle2">
+                ตัวแปร
+              </Typography>
+
+              {[
+                "{{NAME}}",
+                "{{SCHOOL}}",
+                "{{ACTIVITY}}",
+                "{{YEAR}}",
+                "{{CERT_NO}}"
+              ].map(v => (
+
+                <Button
+                  key={v}
+                  size="small"
+                  variant="outlined"
+                  onClick={() => addText(v)}
+                >
+                  {v}
+                </Button>
+
+              ))}
+
+              <Divider />
+
+              <FormControl fullWidth>
+
+                <InputLabel>ฟอนต์</InputLabel>
+
+                <Select
+                  value={fontFamily}
+                  label="ฟอนต์"
+                  onChange={e => setFontFamily(e.target.value)}
+                >
+
+                  <MenuItem value="Prompt">Prompt</MenuItem>
+                  <MenuItem value="Sarabun">Sarabun</MenuItem>
+                  <MenuItem value="Kanit">Kanit</MenuItem>
+
+                </Select>
+
+              </FormControl>
+
+              <Typography>
+                ขนาด {fontSize}
+              </Typography>
+
+              <Slider
+                value={fontSize}
+                min={16}
+                max={80}
+                onChange={(e, v) => setFontSize(v)}
+              />
+
+              <TextField
+                type="color"
+                value={color}
+                onChange={e => setColor(e.target.value)}
+              />
+
+              <Button
+                variant="outlined"
+                onClick={updateSelected}
+              >
+                ใช้กับข้อความที่เลือก
+              </Button>
+
+              <Divider />
+
+              <Stack direction="row" spacing={1}>
+
+                <IconButton onClick={undo}>
+                  <Undo />
+                </IconButton>
+
+                <IconButton onClick={redo}>
+                  <Redo />
+                </IconButton>
+
+                <IconButton onClick={drawGrid}>
+                  <GridOn />
+                </IconButton>
+
+              </Stack>
+
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<Preview />}
+                onClick={previewTemplate}
+              >
+                Preview
+              </Button>
+
+              <Button
+                variant="contained"
+                startIcon={<Download />}
+                onClick={exportPNG}
+              >
+                Export PNG
+              </Button>
+
+              <Button
+                variant="contained"
+                startIcon={<Download />}
+                onClick={exportJPEG}
+              >
+                Export JPEG
+              </Button>
+
+              <Button
+                variant="contained"
+                startIcon={<Download />}
+                onClick={exportPDF}
+              >
+                Export PDF
+              </Button>
+
+              <Button
+                variant="outlined"
+                startIcon={<Save />}
+                onClick={saveCurrentTemplate}
+              >
+                บันทึก Template
+              </Button>
+
+            </Stack>
+
+          </Paper>
+
+          {/* Canvas */}
+
+          <Paper
+            sx={{
+              flex: 1,
+              p: 2,
+              borderRadius: 4,
+              overflow: "auto"
+            }}
+          >
+
+            <Box sx={{ overflow: "auto" }}>
+              <canvas ref={canvasRef} />
+            </Box>
+
+          </Paper>
+
+        </Stack>
+
+      </Box>
+
+    </AdminLayout>
+
+  );
+
+}
