@@ -1,14 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 // Student
-import Search from "./student/pages/Search";
-import Verify from "./student/pages/Verify";
+import Search from "./student/pages/Search.jsx";
+import Verify from "./student/pages/Verify.jsx";
 
 // Admin
-import Dashboard from "./admin/pages/Dashboard";
-import Login from "./admin/pages/Login";
-import TemplateDesigner from "./admin/pages/TemplateDesigner";
-import TemplateManager from "./admin/pages/TemplateManager";
+import Dashboard from "./admin/pages/Dashboard.jsx";
+import Login from "./admin/pages/Login.jsx";
+import TemplateDesigner from "./admin/pages/TemplateDesigner.jsx";
+import TemplateManager from "./admin/pages/TemplateManager.jsx";
 
 function PrivateRoute({ children }) {
   const ok = localStorage.getItem("adminLogin") === "true";
