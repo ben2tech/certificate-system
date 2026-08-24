@@ -26,7 +26,9 @@ import {
   Download,
   GridOn,
   TextFields,
-  Preview
+  Preview,
+  Delete,
+  DeleteSweep
 } from "@mui/icons-material";
 
 import AdminLayout from "../components/AdminLayout";
@@ -223,6 +225,53 @@ export default function TemplateDesigner() {
     canvas.renderAll();
 
   }
+
+  function deleteSelected() {
+
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+
+    const activeObjects = canvas.getActiveObjects();
+    if (activeObjects && activeObjects.length) {
+      activeObjects.forEach(obj => {
+        if (!obj.grid) canvas.remove(obj);
+      });
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      saveHistory();
+    }
+
+  }
+
+  function clearAll() {
+
+    if (!confirm("ต้องการลบข้อความและตัวแปรทั้งหมดใช่หรือไม่?")) return;
+
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+
+    canvas.getObjects().filter(o => !o.grid).forEach(o => canvas.remove(o));
+    canvas.discardActiveObject();
+    canvas.renderAll();
+    saveHistory();
+
+  }
+
+  // Keyboard shortcut (Delete / Backspace)
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const canvas = fabricRef.current;
+        if (!canvas) return;
+        const active = canvas.getActiveObject();
+        if (active && !active.isEditing) {
+          deleteSelected();
+        }
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   /**********************
    * Background
@@ -479,6 +528,25 @@ export default function TemplateDesigner() {
                 onClick={updateSelected}
               >
                 ใช้กับข้อความที่เลือก
+              </Button>
+
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Delete />}
+                onClick={deleteSelected}
+              >
+                ลบตัวแปร/ข้อความที่เลือก (Del)
+              </Button>
+
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                startIcon={<DeleteSweep />}
+                onClick={clearAll}
+              >
+                ล้างตัวแปรทั้งหมด
               </Button>
 
               <Divider />
