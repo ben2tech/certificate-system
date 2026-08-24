@@ -15,14 +15,18 @@ import { searchCertificate } from "../services/studentApi";
 export default function Search() {
 
   const [studentId, setStudentId] = useState("");
-  const [birthday, setBirthday] = useState("");
   const [result, setResult] = useState(null);
 
   async function search() {
 
+    if (!studentId.trim()) {
+      alert("กรุณากรอกรหัสนักเรียน");
+      return;
+    }
+
     try {
 
-      const res = await searchCertificate(studentId, birthday);
+      const res = await searchCertificate(studentId.trim());
 
       setResult(res.data || {});
 
@@ -64,13 +68,7 @@ export default function Search() {
             label="รหัสนักเรียน"
             value={studentId}
             onChange={e => setStudentId(e.target.value)}
-            fullWidth
-          />
-
-          <TextField
-            label="วันเกิด (เช่น 15/03/2553)"
-            value={birthday}
-            onChange={e => setBirthday(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && search()}
             fullWidth
           />
 
