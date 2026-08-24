@@ -328,25 +328,26 @@ export default function TemplateDesigner() {
    **********************/
   async function saveCurrentTemplate() {
 
+    const activity = prompt("กรุณาระบุชื่อกิจกรรมสำหรับ Template นี้:", "กิจกรรมทั่วไป");
+    if (!activity) return;
+
+    const prefix = prompt("กรุณาระบุ Prefix เลขที่เกียรติบัตร (เช่น CERT, SCI):", "CERT");
+    if (!prefix) return;
+
     try {
 
       await saveTemplate({
-
-        activity: "",
-        prefix: "",
+        activity: activity.trim(),
+        prefix: prefix.trim(),
         templateId: "designer-" + Date.now(),
-
-        json: JSON.stringify(
-          fabricRef.current.toJSON()
-        )
-
+        json: JSON.stringify(fabricRef.current.toJSON())
       });
 
       alert("บันทึก Template สำเร็จ");
 
     } catch (err) {
 
-      alert(err.message);
+      alert(err.message || "เกิดข้อผิดพลาดในการบันทึก");
 
     }
 
