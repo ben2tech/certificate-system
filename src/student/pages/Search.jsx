@@ -79,19 +79,21 @@ export default function Search() {
         {/* Header Branding */}
         <Box textAlign="center" mb={4}>
           <Box
+            component="img"
+            src="/logo.png"
+            alt="School Logo"
             sx={{
-              display: "inline-flex",
-              p: 2,
-              borderRadius: "50%",
-              background: "rgba(255, 255, 255, 0.15)",
-              backdropFilter: "blur(10px)",
-              color: "#FFD700",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",
-              mb: 2
+              width: { xs: 95, sm: 115, md: 130 },
+              height: { xs: 95, sm: 115, md: 130 },
+              objectFit: "contain",
+              filter: "drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35))",
+              mb: 2,
+              transition: "transform 0.3s ease",
+              "&:hover": {
+                transform: "scale(1.06)"
+              }
             }}
-          >
-            <WorkspacePremium sx={{ fontSize: { xs: 48, md: 64 } }} />
-          </Box>
+          />
           <Typography
             variant="h3"
             fontWeight={800}
