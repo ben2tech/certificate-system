@@ -46,7 +46,6 @@ export default function Search() {
     }
 
     setLoading(true);
-    setHasSearched(true);
 
     try {
       const res = await searchCertificate(studentId.trim());
@@ -56,6 +55,7 @@ export default function Search() {
       setResult({});
     }
 
+    setHasSearched(true);
     setLoading(false);
   }
 
@@ -179,8 +179,20 @@ export default function Search() {
           </Stack>
         </Paper>
 
+        {/* Loading Indicator */}
+        {loading && (
+          <Fade in={true} timeout={400}>
+            <Box textAlign="center" py={5}>
+              <CircularProgress size={44} sx={{ color: "#FFD700", mb: 2 }} />
+              <Typography variant="body1" color="white" fontWeight={600}>
+                กำลังค้นหาข้อมูลเกียรติบัตร กรุณารอสักครู่...
+              </Typography>
+            </Box>
+          </Fade>
+        )}
+
         {/* Search Results */}
-        {hasSearched && (
+        {!loading && hasSearched && (
           <Fade in={true} timeout={500}>
             <Box mt={4}>
               {totalCerts > 0 ? (
