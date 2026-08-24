@@ -311,25 +311,11 @@ export default function Search() {
         )}
       </Container>
 
-      {/* Footer & Admin link */}
-      <Box textAlign="center" mt={6} color="rgba(255, 255, 255, 0.6)">
+      {/* Footer */}
+      <Box textAlign="center" mt={6} color="rgba(255, 255, 255, 0.5)">
         <Typography variant="caption" display="block">
           ระบบออกเกียรติบัตรออนไลน์ (E-Certificate Management System)
         </Typography>
-        <Button
-          size="small"
-          startIcon={<AdminPanelSettings />}
-          onClick={() => navigate("/admin/login")}
-          sx={{
-            mt: 1,
-            color: "rgba(255, 255, 255, 0.7)",
-            fontSize: "0.75rem",
-            textTransform: "none",
-            "&:hover": { color: "#ffffff" }
-          }}
-        >
-          สำหรับผู้ดูแลระบบ (Admin Login)
-        </Button>
       </Box>
     </Box>
   );
