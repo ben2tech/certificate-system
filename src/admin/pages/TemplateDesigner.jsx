@@ -62,6 +62,8 @@ export default function TemplateDesigner() {
   const [color, setColor] = useState("#000000");
   const [isBold, setIsBold] = useState(false);
   const [textAlign, setTextAlign] = useState("left");
+  const [posX, setPosX] = useState(0);
+  const [posY, setPosY] = useState(0);
 
   /**********************
    * Helper: Update Active Text
@@ -189,19 +191,44 @@ export default function TemplateDesigner() {
         if (active.fill) setColor(typeof active.fill === "string" ? active.fill : "#000000");
         if (active.textAlign) setTextAlign(active.textAlign);
         if (active.fontWeight) setIsBold(active.fontWeight === "bold" || Number(active.fontWeight) >= 700);
+        setPosX(Math.round(active.left || 0));
+        setPosY(Math.round(active.top || 0));
+      } else {
+        setPosX(0);
+        setPosY(0);
       }
     }
 
     canvas.on("selection:created", syncSelection);
     canvas.on("selection:updated", syncSelection);
+    canvas.on("selection:cleared", () => {
+      setPosX(0);
+      setPosY(0);
+    });
+
     canvas.on("mouse:down", (opt) => {
       if (opt.target && (opt.target.type === "textbox" || opt.target.type === "text" || opt.target.type === "i-text" || opt.target.text !== undefined)) {
         lastSelectedRef.current = opt.target;
+        setPosX(Math.round(opt.target.left || 0));
+        setPosY(Math.round(opt.target.top || 0));
+      }
+    });
+
+    canvas.on("object:moving", (e) => {
+      if (e.target) {
+        setPosX(Math.round(e.target.left || 0));
+        setPosY(Math.round(e.target.top || 0));
       }
     });
 
     canvas.on("object:added", saveHistory);
-    canvas.on("object:modified", saveHistory);
+    canvas.on("object:modified", (e) => {
+      if (e.target) {
+        setPosX(Math.round(e.target.left || 0));
+        setPosY(Math.round(e.target.top || 0));
+      }
+      saveHistory();
+    });
 
     return () => canvas.dispose();
 
@@ -789,7 +816,24 @@ export default function TemplateDesigner() {
                 </Button>
               </Stack>
 
-              <Divider />
+              {/* Coordinates Info */}
+              <Box sx={{ p: 1.5, bgcolor: "#f8fafc", borderRadius: 2, border: "1px dashed #cbd5e1", mt: 1 }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" mb={0.5}>
+                  พิกัดตำแหน่ง (X, Y)
+                </Typography>
+                <Stack direction="row" spacing={3}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">X (ซ้าย-ขวา): </Typography>
+                    <Typography variant="body2" fontWeight={700} color="primary" component="span">{posX}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Y (บน-ล่าง): </Typography>
+                    <Typography variant="body2" fontWeight={700} color="primary" component="span">{posY}</Typography>
+                  </Box>
+                </Stack>
+              </Box>
+
+              <Divider sx={{ my: 1 }} />
 
               <Button
                 variant="contained"
