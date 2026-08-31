@@ -64,9 +64,19 @@ export async function generateCertificatePngDataUrl({
       const fontWeight = obj.fontWeight || 700;
       const fontFamily = obj.fontFamily || "Prompt";
       const fill = typeof obj.fill === "string" ? obj.fill : "#0F172A";
-      const textAlign = obj.textAlign || "left";
+      let x = (obj.left || 0) * scale;
+      if (textAlign === "center") {
+        if (obj.width && obj.width > 50) {
+          x = ((obj.left || 0) + (obj.width / 2)) * scale;
+        } else {
+          x = canvas.width / 2;
+        }
+      } else if (textAlign === "right") {
+        if (obj.width && obj.width > 50) {
+          x = ((obj.left || 0) + obj.width) * scale;
+        }
+      }
 
-      const x = (obj.left || 0) * scale;
       const y = (obj.top || 0) * scale + fontSize * 0.85;
 
       ctx.font = `${fontWeight} ${fontSize}px '${fontFamily}', 'Sarabun', 'Prompt', sans-serif`;

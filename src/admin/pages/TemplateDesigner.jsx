@@ -134,11 +134,12 @@ export default function TemplateDesigner() {
     saveHistory();
 
     // If templateId is passed in URL, load its background image directly!
-    if (currentTemplateId) {
-      const id = currentTemplateId.trim();
+    const effectiveBgId = currentTemplateId || "1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA";
+    if (effectiveBgId) {
+      const id = effectiveBgId.trim();
       const bgUrl = (id.startsWith("http://") || id.startsWith("https://") || id.startsWith("/"))
         ? id
-        : `https://drive.google.com/thumbnail?id=${id}&sz=w1600`;
+        : (id.startsWith("designer-") || id.startsWith("test-") ? "https://lh3.googleusercontent.com/d/1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA=w1600" : `https://lh3.googleusercontent.com/d/${id}=w1600`);
 
       fabric.FabricImage.fromURL(bgUrl, { crossOrigin: "anonymous" })
         .then(img => {
@@ -150,15 +151,32 @@ export default function TemplateDesigner() {
         })
         .catch(err => {
           console.error("Failed to load background image from template ID:", err);
-          const saved = localStorage.getItem("autosave-template");
-          if (saved) {
-            canvas.loadFromJSON(saved, () => canvas.renderAll());
-          }
         });
-    } else {
-      const saved = localStorage.getItem("autosave-template");
-      if (saved) {
-        canvas.loadFromJSON(saved, () => canvas.renderAll());
+    }
+
+    // Load saved text objects
+    const saved = (currentActivity && localStorage.getItem(`template_${currentActivity.trim()}`)) || localStorage.getItem("autosave-template");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && Array.isArray(parsed.objects)) {
+          parsed.objects.filter(o => !o.grid && o.text).forEach(o => {
+            const t = new fabric.Textbox(o.text || "", {
+              left: o.left || 300,
+              top: o.top || 300,
+              width: o.width || 500,
+              fontSize: o.fontSize || 34,
+              fontFamily: o.fontFamily || "Prompt",
+              fill: o.fill || "#000000",
+              textAlign: o.textAlign || "center",
+              fontWeight: o.fontWeight || "normal"
+            });
+            canvas.add(t);
+          });
+          canvas.renderAll();
+        }
+      } catch (e) {
+        console.log("Load saved objects notice:", e);
       }
     }
 
