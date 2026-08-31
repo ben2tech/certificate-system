@@ -56,29 +56,57 @@ export default function Search() {
       .catch((err) => console.log("Load templates notice:", err));
   }, []);
 
+  const DEFAULT_BACKGROUND = "https://drive.google.com/thumbnail?id=1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA&sz=w1600";
+
   function getBackgroundForActivity(activityName) {
-    if (!activityName || !templates || templates.length === 0) return "/cert-bg.png";
-    const cleanName = activityName.trim().toLowerCase();
-    const match = templates.find(
+    if (!templates || templates.length === 0) return DEFAULT_BACKGROUND;
+    const cleanName = (activityName || "").trim().toLowerCase();
+
+    // 1. Try exact match
+    let match = templates.find(
       (t) => t.activity && t.activity.trim().toLowerCase() === cleanName
     );
+
+    // 2. Try partial/keyword match (e.g. "วิทย์", "วิทยาศาสตร์")
+    if (!match) {
+      match = templates.find((t) => {
+        if (!t.activity) return false;
+        const act = t.activity.trim().toLowerCase();
+        return cleanName.includes(act) || act.includes(cleanName) ||
+          (cleanName.includes("วิทย์") && act.includes("วิทย์"));
+      });
+    }
+
     if (match && match.templateId) {
       const id = match.templateId.trim();
       if (id.startsWith("http://") || id.startsWith("https://") || id.startsWith("/")) {
         return id;
       }
-      // Google Drive / Slide thumbnail URL
-      return `https://drive.google.com/thumbnail?id=${id}&sz=w1600`;
+      if (!id.startsWith("designer-") && !id.startsWith("test-")) {
+        return `https://drive.google.com/thumbnail?id=${id}&sz=w1600`;
+      }
     }
-    return "/cert-bg.png";
+
+    return DEFAULT_BACKGROUND;
   }
 
   function getTemplateJsonForActivity(activityName) {
-    if (!activityName || !templates || templates.length === 0) return null;
-    const cleanName = activityName.trim().toLowerCase();
-    const match = templates.find(
+    if (!templates || templates.length === 0) return null;
+    const cleanName = (activityName || "").trim().toLowerCase();
+
+    let match = templates.find(
       (t) => t.activity && t.activity.trim().toLowerCase() === cleanName
     );
+
+    if (!match) {
+      match = templates.find((t) => {
+        if (!t.activity) return false;
+        const act = t.activity.trim().toLowerCase();
+        return cleanName.includes(act) || act.includes(cleanName) ||
+          (cleanName.includes("วิทย์") && act.includes("วิทย์"));
+      });
+    }
+
     return match?.json || null;
   }
 

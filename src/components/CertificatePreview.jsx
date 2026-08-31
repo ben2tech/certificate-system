@@ -15,7 +15,7 @@ export default function CertificatePreview({
   activity = "",
   year = "",
   certNo = "",
-  background = "/cert-bg.png",
+  background = "https://drive.google.com/thumbnail?id=1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA&sz=w1600",
   templateJson = null,
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -40,6 +40,8 @@ export default function CertificatePreview({
       // 2. ตรวจสอบข้อมูลจาก localStorage ในเครื่อง
       const keys = [
         activity ? `template_${activity.trim()}` : null,
+        activity && activity.includes("วิทย์") ? "template_กิจกรรมวิทย์" : null,
+        activity && activity.includes("วิทย์") ? "template_สัปดาห์วิทยาศาสตร์" : null,
         "autosave-template",
       ].filter(Boolean);
 
