@@ -110,6 +110,62 @@ export async function generateCertificatePngDataUrl({
   return canvas.toDataURL("image/png", 1.0);
 }
 
+// ค่าพรีเซ็ตพิกัดที่ออกแบบไว้จาก Template Designer (เพื่อให้มือถือ, ไอแพด, และคอมพิวเตอร์ ได้ตำแหน่งเดียวกัน 100%)
+const PRESET_TEMPLATES = {
+  SCI2569: [
+    {
+      type: "textbox",
+      text: "{{NAME}}",
+      left: 398,
+      top: 340,
+      width: 327,
+      fontSize: 26,
+      fontFamily: "Sarabun",
+      fill: "#0D47A1",
+      textAlign: "center",
+      fontWeight: "bold",
+    },
+    {
+      type: "textbox",
+      text: "{{CERT_NO}}",
+      left: 770,
+      top: 52,
+      width: 250,
+      fontSize: 16,
+      fontFamily: "Sarabun",
+      fill: "#334155",
+      textAlign: "left",
+      fontWeight: "bold",
+    },
+  ],
+  DEFAULT: [
+    {
+      type: "textbox",
+      text: "{{NAME}}",
+      left: 398,
+      top: 340,
+      width: 327,
+      fontSize: 26,
+      fontFamily: "Sarabun",
+      fill: "#0D47A1",
+      textAlign: "center",
+      fontWeight: "bold",
+    },
+    {
+      type: "textbox",
+      text: "{{CERT_NO}}",
+      left: 770,
+      top: 52,
+      width: 250,
+      fontSize: 16,
+      fontFamily: "Sarabun",
+      fill: "#334155",
+      textAlign: "left",
+      fontWeight: "bold",
+    },
+  ],
+};
+
 /**
  * CertificatePreview — สร้างภาพ PNG ใน Memory แล้วแสดงผลเป็น <img> บนหน้าเว็บโดยตรง
  */
@@ -131,6 +187,7 @@ export default function CertificatePreview({
   // ดึงตำแหน่งตัวแปรจาก Template
   const customVariables = useMemo(() => {
     try {
+      // 1. จาก API Google Apps Script
       if (templateJson) {
         const parsed = typeof templateJson === "string" ? JSON.parse(templateJson) : templateJson;
         if (parsed && Array.isArray(parsed.objects) && parsed.objects.length > 0) {
@@ -141,6 +198,7 @@ export default function CertificatePreview({
         }
       }
 
+      // 2. จาก LocalStorage ของ Admin
       const keys = [
         prefix ? `template_${prefix.trim()}` : null,
         activity ? `template_${activity.trim()}` : null,
@@ -163,10 +221,18 @@ export default function CertificatePreview({
           }
         }
       }
+
+      // 3. ใช้พรีเซ็ตพิกัดที่ออกแบบไว้จาก Template Designer
+      const normalizedPrefix = (prefix || "").trim().toUpperCase();
+      const normalizedActivity = (activity || "").trim().toLowerCase();
+      if (PRESET_TEMPLATES[normalizedPrefix]) return PRESET_TEMPLATES[normalizedPrefix];
+      if (normalizedActivity.includes("วิทย์") || normalizedPrefix.includes("SCI")) return PRESET_TEMPLATES.SCI2569;
+
+      return PRESET_TEMPLATES.DEFAULT;
     } catch (e) {
       console.log("Template config parse notice:", e);
     }
-    return null;
+    return PRESET_TEMPLATES.DEFAULT;
   }, [activity, prefix, templateJson]);
 
   // สร้างภาพ PNG ในหน่วยความจำเมื่อข้อมูลเปลี่ยน
