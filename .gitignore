@@ -25,3 +25,6 @@ dist-ssr
 
 # Cloned workspace
 my-new-certificate/
+
+# Local Netlify folder
+.netlify

@@ -1,43 +1,77 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Paper,
   Typography,
   TextField,
   Button,
-  Card,
-  CardContent,
   Stack,
   InputAdornment,
   CircularProgress,
   Chip,
   Container,
-  Divider,
   Fade,
-  IconButton
+  Dialog,
+  DialogContent,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 
 import {
   Search as SearchIcon,
-  WorkspacePremium,
-  School,
-  Download,
-  Visibility,
   BadgeOutlined,
   CalendarMonth,
-  AdminPanelSettings,
-  ErrorOutline
+  ErrorOutline,
+  Close,
+  ZoomIn,
+  Download,
+  PictureAsPdf,
+  Image as ImageIcon,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
 
-import { searchCertificate } from "../services/studentApi";
+import { searchCertificate, getTemplates } from "../services/studentApi";
+import CertificatePreview from "../../components/CertificatePreview";
+import { downloadCertificateImage, downloadCertificatePDF } from "../../utils/exportEngine";
 
 export default function Search() {
-  const navigate = useNavigate();
   const [studentId, setStudentId] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [result, setResult] = useState(null);
+  const [templates, setTemplates] = useState([]);
+
+  // Fullscreen dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedCert, setSelectedCert] = useState(null);
+  const [selectedYear, setSelectedYear] = useState("");
+
+  // Load templates list on mount to get background IDs per activity
+  useEffect(() => {
+    getTemplates()
+      .then((res) => {
+        if (res && res.data) {
+          setTemplates(res.data);
+        }
+      })
+      .catch((err) => console.log("Load templates notice:", err));
+  }, []);
+
+  function getBackgroundForActivity(activityName) {
+    if (!activityName || !templates || templates.length === 0) return "/cert-bg.png";
+    const cleanName = activityName.trim().toLowerCase();
+    const match = templates.find(
+      (t) => t.activity && t.activity.trim().toLowerCase() === cleanName
+    );
+    if (match && match.templateId) {
+      const id = match.templateId.trim();
+      if (id.startsWith("http://") || id.startsWith("https://") || id.startsWith("/")) {
+        return id;
+      }
+      // Google Drive / Slide thumbnail URL
+      return `https://drive.google.com/thumbnail?id=${id}&sz=w1600`;
+    }
+    return "/cert-bg.png";
+  }
 
   async function handleSearch() {
     if (!studentId.trim()) {
@@ -59,6 +93,18 @@ export default function Search() {
     setLoading(false);
   }
 
+  function openFullscreen(cert, year) {
+    setSelectedCert(cert);
+    setSelectedYear(year);
+    setDialogOpen(true);
+  }
+
+  function closeFullscreen() {
+    setDialogOpen(false);
+    setSelectedCert(null);
+    setSelectedYear("");
+  }
+
   const totalCerts = result
     ? Object.values(result).reduce((acc, list) => acc + list.length, 0)
     : 0;
@@ -75,7 +121,7 @@ export default function Search() {
         justifyContent: "space-between"
       }}
     >
-      <Container maxWidth="md">
+      <Container maxWidth="lg">
         {/* Header Branding */}
         <Box textAlign="center" mb={4}>
           <Box
@@ -114,7 +160,7 @@ export default function Search() {
               fontSize: { xs: "0.95rem", md: "1.1rem" }
             }}
           >
-            กรอกรหัสนักเรียนเพื่อค้นหาและดาวน์โหลดเกียรติบัตร (E-Certificate)
+            กรอกรหัสนักเรียนเพื่อค้นหาและดูเกียรติบัตร (E-Certificate)
           </Typography>
         </Box>
 
@@ -126,7 +172,9 @@ export default function Search() {
             borderRadius: 4,
             background: "rgba(255, 255, 255, 0.95)",
             backdropFilter: "blur(16px)",
-            boxShadow: "0 20px 40px rgba(0,0,0,0.25)"
+            boxShadow: "0 20px 40px rgba(0,0,0,0.25)",
+            maxWidth: 700,
+            mx: "auto"
           }}
         >
           <Stack
@@ -197,7 +245,7 @@ export default function Search() {
             <Box mt={4}>
               {totalCerts > 0 ? (
                 <Box>
-                  <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                  <Stack direction="row" alignItems="center" spacing={1} mb={3}>
                     <Typography variant="h6" fontWeight={700} color="white">
                       ผลการค้นหา
                     </Typography>
@@ -210,92 +258,135 @@ export default function Search() {
                   </Stack>
 
                   {Object.entries(result).map(([year, items]) => (
-                    <Box key={year} mb={4}>
-                      <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+                    <Box key={year} mb={5}>
+                      <Stack direction="row" alignItems="center" spacing={1} mb={2}>
                         <CalendarMonth sx={{ color: "#FFD700" }} />
                         <Typography variant="subtitle1" fontWeight={700} color="#FFD700">
                           ปีการศึกษา {year}
                         </Typography>
                       </Stack>
 
-                      <Stack spacing={2}>
-                        {items.map((c, i) => (
-                          <Card
-                            key={i}
-                            sx={{
-                              borderRadius: 3,
-                              transition: "transform 0.2s, box-shadow 0.2s",
-                              "&:hover": {
-                                transform: "translateY(-2px)",
-                                boxShadow: "0 12px 28px rgba(0,0,0,0.2)"
-                              }
-                            }}
-                          >
-                            <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-                              <Stack
-                                direction={{ xs: "column", sm: "row" }}
-                                justifyContent="space-between"
-                                alignItems={{ xs: "flex-start", sm: "center" }}
-                                spacing={2}
+                      <Stack spacing={4}>
+                        {items.map((c, i) => {
+                          const certElementId = `cert-preview-${year}-${i}`;
+                          const fileName = `เกียรติบัตร_${c.name || studentId}_${c.activity || "กิจกรรม"}`;
+                          return (
+                            <Box key={i}>
+                              {/* Certificate Preview Card */}
+                              <Box
+                                sx={{
+                                  borderRadius: 3,
+                                  overflow: "hidden",
+                                  boxShadow: "0 10px 35px rgba(0,0,0,0.3)",
+                                  bgcolor: "rgba(255,255,255,0.03)",
+                                  border: "1px solid rgba(255,255,255,0.1)",
+                                  p: { xs: 1.5, sm: 2.5 },
+                                }}
                               >
-                                <Box>
-                                  <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
-                                    <WorkspacePremium color="primary" fontSize="small" />
-                                    <Typography variant="h6" fontWeight={700} color="#1e293b">
-                                      {c.activity || "เกียรติบัตร"}
-                                    </Typography>
-                                  </Stack>
-                                  {c.name && (
-                                    <Typography variant="body2" color="text.secondary" mb={0.5}>
-                                      ผู้รับ: <strong>{c.name}</strong> {c.school && `(${c.school})`}
-                                    </Typography>
-                                  )}
-                                  <Typography
-                                    variant="caption"
+                                <Box
+                                  sx={{
+                                    cursor: "pointer",
+                                    position: "relative",
+                                    borderRadius: 2,
+                                    overflow: "hidden",
+                                    "&:hover .cert-zoom-hint": {
+                                      opacity: 1,
+                                    },
+                                  }}
+                                  onClick={() => openFullscreen(c, year)}
+                                >
+                                  <CertificatePreview
+                                    id={certElementId}
+                                    name={c.name}
+                                    school={c.school}
+                                    activity={c.activity}
+                                    year={year}
+                                    certNo={c.certNo}
+                                    background={getBackgroundForActivity(c.activity)}
+                                  />
+
+                                  {/* Zoom hint overlay */}
+                                  <Box
+                                    className="cert-zoom-hint"
                                     sx={{
-                                      display: "inline-block",
-                                      px: 1.2,
-                                      py: 0.3,
-                                      bgcolor: "#f1f5f9",
-                                      borderRadius: 1.5,
-                                      color: "#475569",
-                                      fontWeight: 600,
-                                      fontFamily: "monospace"
+                                      position: "absolute",
+                                      inset: 0,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      bgcolor: "rgba(0,0,0,0.3)",
+                                      opacity: 0,
+                                      transition: "opacity 0.25s ease",
+                                      zIndex: 5,
                                     }}
                                   >
-                                    เลขที่: {c.certNo || "-"}
-                                  </Typography>
+                                    <Stack alignItems="center" spacing={0.5}>
+                                      <ZoomIn sx={{ fontSize: 48, color: "white" }} />
+                                      <Typography variant="body2" sx={{ color: "white", fontWeight: 700 }}>
+                                        คลิกเพื่อดูขนาดเต็ม
+                                      </Typography>
+                                    </Stack>
+                                  </Box>
                                 </Box>
 
-                                <Stack direction="row" spacing={1.5} width={{ xs: "100%", sm: "auto" }}>
-                                  {c.preview && (
-                                    <Button
-                                      variant="outlined"
-                                      startIcon={<Visibility />}
-                                      onClick={() => window.open(c.preview, "_blank")}
-                                      fullWidth
-                                      sx={{ borderRadius: 2, px: 2 }}
-                                    >
-                                      ดู
-                                    </Button>
-                                  )}
-                                  {c.download && (
-                                    <Button
-                                      variant="contained"
-                                      color="primary"
-                                      startIcon={<Download />}
-                                      onClick={() => window.open(c.download, "_blank")}
-                                      fullWidth
-                                      sx={{ borderRadius: 2, px: 2.5, fontWeight: 700 }}
-                                    >
-                                      ดาวน์โหลด
-                                    </Button>
-                                  )}
+                                {/* Action Buttons */}
+                                <Stack
+                                  direction={{ xs: "column", sm: "row" }}
+                                  spacing={1.5}
+                                  justifyContent="center"
+                                  alignItems="center"
+                                  mt={2.5}
+                                >
+                                  <Button
+                                    variant="outlined"
+                                    startIcon={<ZoomIn />}
+                                    onClick={() => openFullscreen(c, year)}
+                                    sx={{
+                                      color: "#90caf9",
+                                      borderColor: "rgba(144, 202, 249, 0.5)",
+                                      "&:hover": { borderColor: "#90caf9", bgcolor: "rgba(144, 202, 249, 0.1)" },
+                                      fontWeight: 600,
+                                      px: 2.5,
+                                    }}
+                                  >
+                                    ดูขนาดเต็ม
+                                  </Button>
+
+                                  <Button
+                                    variant="contained"
+                                    startIcon={<ImageIcon />}
+                                    onClick={() => downloadCertificateImage(certElementId, `${fileName}.png`)}
+                                    sx={{
+                                      background: "linear-gradient(135deg, #1976D2 0%, #0D47A1 100%)",
+                                      color: "white",
+                                      fontWeight: 700,
+                                      px: 3,
+                                      boxShadow: "0 4px 14px rgba(25, 118, 210, 0.4)",
+                                    }}
+                                  >
+                                    บันทึกรูปภาพ (PNG)
+                                  </Button>
+
+                                  <Button
+                                    variant="contained"
+                                    color="secondary"
+                                    startIcon={<PictureAsPdf />}
+                                    onClick={() => downloadCertificatePDF(certElementId, `${fileName}.pdf`)}
+                                    sx={{
+                                      background: "linear-gradient(135deg, #FF6F00 0%, #E65100 100%)",
+                                      color: "white",
+                                      fontWeight: 700,
+                                      px: 3,
+                                      boxShadow: "0 4px 14px rgba(230, 81, 0, 0.4)",
+                                    }}
+                                  >
+                                    ดาวน์โหลด PDF
+                                  </Button>
                                 </Stack>
-                              </Stack>
-                            </CardContent>
-                          </Card>
-                        ))}
+                              </Box>
+                            </Box>
+                          );
+                        })}
                       </Stack>
                     </Box>
                   ))}
@@ -306,7 +397,9 @@ export default function Search() {
                     p: 4,
                     textAlign: "center",
                     borderRadius: 3,
-                    bgcolor: "rgba(255, 255, 255, 0.95)"
+                    bgcolor: "rgba(255, 255, 255, 0.95)",
+                    maxWidth: 700,
+                    mx: "auto"
                   }}
                 >
                   <ErrorOutline color="error" sx={{ fontSize: 56, mb: 1 }} />
@@ -322,6 +415,120 @@ export default function Search() {
           </Fade>
         )}
       </Container>
+
+      {/* Fullscreen Certificate Dialog */}
+      <Dialog
+        open={dialogOpen}
+        onClose={closeFullscreen}
+        maxWidth={false}
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: { xs: 0, sm: 3 },
+            bgcolor: "#0f172a",
+            maxWidth: "95vw",
+            maxHeight: "95vh",
+            m: { xs: 0, sm: 2 }
+          }
+        }}
+      >
+        <DialogContent
+          sx={{
+            p: { xs: 2, sm: 4 },
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            minHeight: { xs: "70vh", sm: "auto" }
+          }}
+        >
+          {/* Close Button */}
+          <IconButton
+            onClick={closeFullscreen}
+            sx={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              bgcolor: "rgba(255,255,255,0.15)",
+              color: "white",
+              zIndex: 10,
+              "&:hover": {
+                bgcolor: "rgba(255,255,255,0.3)"
+              }
+            }}
+          >
+            <Close />
+          </IconButton>
+
+          {/* Certificate Preview — full size */}
+          {selectedCert && (
+            <Box sx={{ width: "100%", maxWidth: 1100, mt: 2 }}>
+              <CertificatePreview
+                id="fullscreen-cert-element"
+                name={selectedCert.name}
+                school={selectedCert.school}
+                activity={selectedCert.activity}
+                year={selectedYear}
+                certNo={selectedCert.certNo}
+                background={getBackgroundForActivity(selectedCert.activity)}
+              />
+
+              {/* Dialog Download Actions */}
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={2}
+                justifyContent="center"
+                mt={3}
+              >
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<ImageIcon />}
+                  onClick={() =>
+                    downloadCertificateImage(
+                      "fullscreen-cert-element",
+                      `เกียรติบัตร_${selectedCert.name || studentId}.png`
+                    )
+                  }
+                  sx={{
+                    background: "linear-gradient(135deg, #1976D2 0%, #0D47A1 100%)",
+                    fontWeight: 700,
+                    px: 4,
+                    py: 1.2,
+                    fontSize: "1rem",
+                    boxShadow: "0 6px 20px rgba(25, 118, 210, 0.4)",
+                  }}
+                >
+                  บันทึกรูปภาพเกียรติบัตร (PNG)
+                </Button>
+
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<PictureAsPdf />}
+                  onClick={() =>
+                    downloadCertificatePDF(
+                      "fullscreen-cert-element",
+                      `เกียรติบัตร_${selectedCert.name || studentId}.pdf`
+                    )
+                  }
+                  sx={{
+                    background: "linear-gradient(135deg, #FF6F00 0%, #E65100 100%)",
+                    fontWeight: 700,
+                    px: 4,
+                    py: 1.2,
+                    fontSize: "1rem",
+                    boxShadow: "0 6px 20px rgba(230, 81, 0, 0.4)",
+                  }}
+                >
+                  ดาวน์โหลดเป็น PDF
+                </Button>
+              </Stack>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Footer */}
       <Box textAlign="center" mt={6} color="rgba(255, 255, 255, 0.5)">

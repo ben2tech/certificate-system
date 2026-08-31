@@ -3,163 +3,333 @@ import {
   Box,
   Card,
   CardContent,
+  CardMedia,
   Typography,
   Grid,
   Button,
   Stack,
-  CircularProgress
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Chip,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 
-import { Add, Edit } from "@mui/icons-material";
+import { Add, Edit, Palette, Refresh, Image as ImageIcon, OpenInNew } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
 import AdminLayout from "../components/AdminLayout";
-import { getTemplates } from "../services/adminApi";
+import { getTemplates, saveTemplate } from "../services/adminApi";
 
 export default function TemplateManager() {
-
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [templates, setTemplates] = useState([]);
+
+  // Modal State for Add/Edit Template
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editActivity, setEditActivity] = useState("");
+  const [editPrefix, setEditPrefix] = useState("");
+  const [editTemplateId, setEditTemplateId] = useState("");
 
   useEffect(() => {
     loadTemplates();
   }, []);
 
   async function loadTemplates() {
-
     setLoading(true);
-
     try {
-
       const res = await getTemplates();
-
       setTemplates(res.data || []);
-
     } catch (err) {
-
       console.error(err);
       alert("โหลด Template ไม่สำเร็จ");
+    }
+    setLoading(false);
+  }
 
+  function handleOpenAdd() {
+    setEditActivity("");
+    setEditPrefix("CERT");
+    setEditTemplateId("");
+    setDialogOpen(true);
+  }
+
+  function handleOpenEdit(item) {
+    setEditActivity(item.activity || "");
+    setEditPrefix(item.prefix || "CERT");
+    setEditTemplateId(item.templateId || "");
+    setDialogOpen(true);
+  }
+
+  async function handleSave() {
+    if (!editActivity.trim()) {
+      alert("กรุณาระบุชื่อกิจกรรม");
+      return;
+    }
+    if (!editTemplateId.trim()) {
+      alert("กรุณาระบุ Template ID หรือ URL รูปพื้นหลัง");
+      return;
     }
 
-    setLoading(false);
+    setSaving(true);
+    try {
+      await saveTemplate({
+        activity: editActivity.trim(),
+        prefix: editPrefix.trim() || "CERT",
+        templateId: editTemplateId.trim(),
+      });
+      alert("บันทึก Template สำเร็จ!");
+      setDialogOpen(false);
+      await loadTemplates();
+    } catch (err) {
+      alert("บันทึกไม่สำเร็จ: " + (err.message || "เกิดข้อผิดพลาด"));
+    }
+    setSaving(false);
+  }
 
+  function getThumbnailUrl(templateId) {
+    if (!templateId) return "";
+    const id = templateId.trim();
+    if (id.startsWith("http://") || id.startsWith("https://") || id.startsWith("/")) {
+      return id;
+    }
+    return `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
   }
 
   return (
-
     <AdminLayout>
-
       <Box>
-
+        {/* Header */}
         <Stack
-          direction="row"
+          direction={{ xs: "column", sm: "row" }}
           justifyContent="space-between"
-          alignItems="center"
-          mb={3}
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          mb={4}
         >
-
-          <Typography
-            variant="h4"
-            fontWeight={700}
-          >
-            📄 Template Manager
-          </Typography>
-
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => navigate("/admin/designer")}
-          >
-            สร้าง Template
-          </Button>
-
-        </Stack>
-
-        {loading ? (
-
-          <Box display="flex" justifyContent="center" mt={6}>
-            <CircularProgress />
+          <Box>
+            <Typography variant="h4" fontWeight={700} color="primary">
+              📄 จัดการ Template & พื้นหลังเกียรติบัตร
+            </Typography>
+            <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+              กำหนดพื้นหลังและตั้งค่าเกียรติบัตรแยกตามแต่ละกิจกรรม (สัปดาห์วิทยาศาสตร์, ภาษาไทย ฯลฯ)
+            </Typography>
           </Box>
 
+          <Stack direction="row" spacing={1.5}>
+            <Button
+              variant="outlined"
+              startIcon={<Refresh />}
+              onClick={loadTemplates}
+            >
+              รีเฟรช
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleOpenAdd}
+              sx={{
+                background: "linear-gradient(135deg, #1976D2 0%, #0D47A1 100%)",
+                fontWeight: 700,
+              }}
+            >
+              เพิ่ม Template กิจกรรม
+            </Button>
+          </Stack>
+        </Stack>
+
+        {/* Content */}
+        {loading ? (
+          <Box display="flex" justifyContent="center" py={10}>
+            <CircularProgress />
+          </Box>
         ) : templates.length === 0 ? (
-
-          <Card>
-
+          <Card sx={{ borderRadius: 3, p: 4, textAlign: "center" }}>
             <CardContent>
-
-              <Typography>
-                ยังไม่มี Template
+              <Typography variant="h6" fontWeight={700} gutterBottom>
+                ยังไม่มี Template เกียรติบัตร
               </Typography>
-
+              <Typography color="text.secondary" variant="body2" sx={{ mb: 3 }}>
+                คลิกปุ่มด้านล่างเพื่อเพิ่ม Template และผูกพื้นหลังกับกิจกรรม
+              </Typography>
+              <Button variant="contained" startIcon={<Add />} onClick={handleOpenAdd}>
+                เพิ่ม Template แรก
+              </Button>
             </CardContent>
-
           </Card>
-
         ) : (
-
-          <Grid container spacing={3}>
-
+          <Grid container spacing={2.5}>
             {templates.map((item, index) => (
-
               <Grid item xs={12} md={6} lg={4} key={index}>
+                <Card
+                  sx={{
+                    borderRadius: 3,
+                    boxShadow: "0 4px 14px rgba(0,0,0,0.06)",
+                    border: "1px solid #e2e8f0",
+                    transition: "transform 0.2s, box-shadow 0.2s",
+                    "&:hover": {
+                      transform: "translateY(-2px)",
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
+                    },
+                  }}
+                >
+                  <CardContent sx={{ p: 3 }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
+                      <Typography variant="h6" fontWeight={700} color="#1e293b">
+                        {item.activity}
+                      </Typography>
+                      <Chip
+                        label={item.prefix || "CERT"}
+                        size="small"
+                        color="primary"
+                        sx={{ fontWeight: 700 }}
+                      />
+                    </Stack>
 
-                <Card sx={{ borderRadius: 3 }}>
-
-                  <CardContent>
-
-                    <Typography variant="h6">
-                      {item.activity}
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      Template ID / Drive ID:
                     </Typography>
-
-                    <Typography color="text.secondary">
-                      Prefix: {item.prefix}
-                    </Typography>
-
-                    <Typography
-                      variant="body2"
-                      sx={{ mt: 1 }}
-                    >
-                      Template ID:
-                    </Typography>
-
                     <Typography
                       variant="caption"
                       sx={{
-                        wordBreak: "break-all"
+                        fontFamily: "monospace",
+                        color: "#475569",
+                        wordBreak: "break-all",
+                        display: "block",
+                        bgcolor: "#f8fafc",
+                        p: 1.2,
+                        borderRadius: 1.5,
+                        mt: 0.5,
+                        mb: 2.5,
+                        border: "1px solid #f1f5f9",
                       }}
                     >
                       {item.templateId}
                     </Typography>
 
-                    <Button
-                      sx={{ mt: 2 }}
-                      variant="outlined"
-                      startIcon={<Edit />}
-                      fullWidth
-                      onClick={() => navigate("/admin/designer")}
-                    >
-                      เปิด Designer
-                    </Button>
-
+                    <Stack direction="row" spacing={1.5}>
+                      <Button
+                        variant="outlined"
+                        size="medium"
+                        startIcon={<Edit />}
+                        fullWidth
+                        onClick={() => handleOpenEdit(item)}
+                      >
+                        แก้ไขข้อมูล
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        size="medium"
+                        startIcon={<Palette />}
+                        fullWidth
+                        onClick={() =>
+                          navigate(
+                            `/admin/designer?activity=${encodeURIComponent(
+                              item.activity || ""
+                            )}&templateId=${encodeURIComponent(
+                              item.templateId || ""
+                            )}&prefix=${encodeURIComponent(item.prefix || "CERT")}`
+                          )
+                        }
+                        sx={{ fontWeight: 700 }}
+                      >
+                        เปิด Designer
+                      </Button>
+                    </Stack>
                   </CardContent>
-
                 </Card>
-
               </Grid>
-
             ))}
-
           </Grid>
-
         )}
 
+        {/* Dialog Add/Edit Template */}
+        <Dialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{ sx: { borderRadius: 3 } }}
+        >
+          <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>
+            {editActivity ? `แก้ไข Template: ${editActivity}` : "เพิ่ม Template กิจกรรมใหม่"}
+          </DialogTitle>
+          <DialogContent sx={{ pt: 2 }}>
+            <Stack spacing={2.5} sx={{ mt: 1 }}>
+              <TextField
+                label="ชื่อกิจกรรม (Activity Name)"
+                placeholder="เช่น สัปดาห์วิทยาศาสตร์, กิจกรรมสถานศึกษาสีขาว"
+                value={editActivity}
+                onChange={(e) => setEditActivity(e.target.value)}
+                fullWidth
+                required
+                helperText="ต้องตรงกับชื่อกิจกรรมในไฟล์ Excel หรือข้อมูลนักเรียน"
+              />
+
+              <TextField
+                label="Prefix เลขที่เกียรติบัตร"
+                placeholder="เช่น SCI69, CERT, THAI"
+                value={editPrefix}
+                onChange={(e) => setEditPrefix(e.target.value)}
+                fullWidth
+              />
+
+              <TextField
+                label="Template ID หรือ Google Drive File ID / Image URL"
+                placeholder="เช่น 1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA"
+                value={editTemplateId}
+                onChange={(e) => setEditTemplateId(e.target.value)}
+                fullWidth
+                required
+                helperText="ใส่ ID ไฟล์ Google Slides / Google Drive ของพื้นหลัง หรือ URL รูปภาพ"
+              />
+
+              {editTemplateId && (
+                <Box sx={{ mt: 1, p: 1.5, bgcolor: "#f8fafc", borderRadius: 2 }}>
+                  <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                    ตัวอย่างรูปพื้นหลัง:
+                  </Typography>
+                  <Box
+                    component="img"
+                    src={getThumbnailUrl(editTemplateId)}
+                    alt="Preview"
+                    sx={{
+                      width: "100%",
+                      maxHeight: 180,
+                      objectFit: "contain",
+                      borderRadius: 1,
+                    }}
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                    }}
+                  />
+                </Box>
+              )}
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ p: 2.5, pt: 1 }}>
+            <Button onClick={() => setDialogOpen(false)} disabled={saving}>
+              ยกเลิก
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSave}
+              disabled={saving}
+              sx={{ px: 3, fontWeight: 700 }}
+            >
+              {saving ? "กำลังบันทึก..." : "บันทึก Template"}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
-
     </AdminLayout>
-
   );
-
 }

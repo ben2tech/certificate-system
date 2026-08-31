@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import * as fabric from "fabric";
 import { jsPDF } from "jspdf";
 
@@ -15,7 +16,10 @@ import {
   InputLabel,
   IconButton,
   Divider,
-  TextField
+  TextField,
+  Chip,
+  ButtonGroup,
+  Tooltip
 } from "@mui/material";
 
 import {
@@ -28,16 +32,27 @@ import {
   TextFields,
   Preview,
   Delete,
-  DeleteSweep
+  DeleteSweep,
+  Add as AddIcon,
+  Remove as RemoveIcon,
+  FormatBold,
+  FormatAlignLeft,
+  FormatAlignCenter,
+  FormatAlignRight
 } from "@mui/icons-material";
 
 import AdminLayout from "../components/AdminLayout";
 import { saveTemplate } from "../services/adminApi";
 
 export default function TemplateDesigner() {
+  const [searchParams] = useSearchParams();
+  const currentActivity = searchParams.get("activity") || "";
+  const currentTemplateId = searchParams.get("templateId") || "";
+  const currentPrefix = searchParams.get("prefix") || "CERT";
 
   const canvasRef = useRef(null);
   const fabricRef = useRef(null);
+  const lastSelectedRef = useRef(null);
 
   const history = useRef([]);
   const redoStack = useRef([]);
@@ -45,6 +60,61 @@ export default function TemplateDesigner() {
   const [fontSize, setFontSize] = useState(34);
   const [fontFamily, setFontFamily] = useState("Prompt");
   const [color, setColor] = useState("#000000");
+  const [isBold, setIsBold] = useState(false);
+  const [textAlign, setTextAlign] = useState("left");
+
+  /**********************
+   * Helper: Update Active Text
+   **********************/
+  function updateActiveText(props) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+
+    const active = canvas.getActiveObject() || lastSelectedRef.current;
+    if (!active) return;
+
+    if (active.type === "textbox" || active.type === "text" || active.type === "i-text" || active.text !== undefined) {
+      if (active.styles) active.styles = {};
+      if (props.fontSize) {
+        // If scaled, normalize scale so fontSize is true
+        active.set({ ...props, scaleX: 1, scaleY: 1 });
+      } else {
+        active.set(props);
+      }
+      active.setCoords();
+      canvas.setActiveObject(active);
+      canvas.renderAll();
+      canvas.requestRenderAll();
+      saveHistory();
+    }
+  }
+
+  function handleFontSizeChange(val) {
+    const num = Math.max(10, Math.min(120, Number(val) || 12));
+    setFontSize(num);
+    updateActiveText({ fontSize: num });
+  }
+
+  function handleFontFamilyChange(val) {
+    setFontFamily(val);
+    updateActiveText({ fontFamily: val });
+  }
+
+  function handleColorChange(val) {
+    setColor(val);
+    updateActiveText({ fill: val });
+  }
+
+  function handleAlignChange(val) {
+    setTextAlign(val);
+    updateActiveText({ textAlign: val });
+  }
+
+  function handleBoldToggle() {
+    const next = !isBold;
+    setIsBold(next);
+    updateActiveText({ fontWeight: next ? "bold" : "normal" });
+  }
 
   /**********************
    * Create Canvas
@@ -63,11 +133,54 @@ export default function TemplateDesigner() {
     drawGrid();
     saveHistory();
 
-    const saved = localStorage.getItem("autosave-template");
+    // If templateId is passed in URL, load its background image directly!
+    if (currentTemplateId) {
+      const id = currentTemplateId.trim();
+      const bgUrl = (id.startsWith("http://") || id.startsWith("https://") || id.startsWith("/"))
+        ? id
+        : `https://drive.google.com/thumbnail?id=${id}&sz=w1600`;
 
-    if (saved) {
-      canvas.loadFromJSON(saved, () => canvas.renderAll());
+      fabric.FabricImage.fromURL(bgUrl, { crossOrigin: "anonymous" })
+        .then(img => {
+          img.scaleToWidth(1123);
+          img.scaleToHeight(794);
+          canvas.backgroundImage = img;
+          canvas.renderAll();
+          saveHistory();
+        })
+        .catch(err => {
+          console.error("Failed to load background image from template ID:", err);
+          const saved = localStorage.getItem("autosave-template");
+          if (saved) {
+            canvas.loadFromJSON(saved, () => canvas.renderAll());
+          }
+        });
+    } else {
+      const saved = localStorage.getItem("autosave-template");
+      if (saved) {
+        canvas.loadFromJSON(saved, () => canvas.renderAll());
+      }
     }
+
+    function syncSelection(e) {
+      const active = e.selected?.[0] || canvas.getActiveObject();
+      if (active && (active.type === "textbox" || active.type === "text" || active.type === "i-text" || active.text !== undefined)) {
+        lastSelectedRef.current = active;
+        if (active.fontSize) setFontSize(Math.round(active.fontSize));
+        if (active.fontFamily) setFontFamily(active.fontFamily);
+        if (active.fill) setColor(typeof active.fill === "string" ? active.fill : "#000000");
+        if (active.textAlign) setTextAlign(active.textAlign);
+        if (active.fontWeight) setIsBold(active.fontWeight === "bold" || Number(active.fontWeight) >= 700);
+      }
+    }
+
+    canvas.on("selection:created", syncSelection);
+    canvas.on("selection:updated", syncSelection);
+    canvas.on("mouse:down", (opt) => {
+      if (opt.target && (opt.target.type === "textbox" || opt.target.type === "text" || opt.target.type === "i-text" || opt.target.text !== undefined)) {
+        lastSelectedRef.current = opt.target;
+      }
+    });
 
     canvas.on("object:added", saveHistory);
     canvas.on("object:modified", saveHistory);
@@ -85,16 +198,17 @@ export default function TemplateDesigner() {
 
       if (!fabricRef.current) return;
 
-      localStorage.setItem(
-        "autosave-template",
-        JSON.stringify(fabricRef.current.toJSON())
-      );
+      const jsonStr = JSON.stringify(fabricRef.current.toJSON());
+      localStorage.setItem("autosave-template", jsonStr);
+      if (currentActivity) {
+        localStorage.setItem(`template_${currentActivity.trim()}`, jsonStr);
+      }
 
-    }, 5000);
+    }, 3000);
 
     return () => clearInterval(timer);
 
-  }, []);
+  }, [currentActivity]);
 
   /**********************
    * Grid
@@ -188,11 +302,12 @@ export default function TemplateDesigner() {
   }
 
   /**********************
-   * Text
+   * Text Handlers (Real-time update)
    **********************/
   function addText(text) {
 
     const canvas = fabricRef.current;
+    if (!canvas) return;
 
     const obj = new fabric.Textbox(text, {
       left: 220,
@@ -200,30 +315,26 @@ export default function TemplateDesigner() {
       width: 650,
       fontSize,
       fill: color,
-      fontFamily
+      fontFamily,
+      textAlign,
+      fontWeight: isBold ? "bold" : "normal"
     });
 
     canvas.add(obj);
     canvas.setActiveObject(obj);
+    lastSelectedRef.current = obj;
+    canvas.renderAll();
 
   }
 
   function updateSelected() {
-
-    const canvas = fabricRef.current;
-
-    const obj = canvas.getActiveObject();
-
-    if (!obj) return;
-
-    obj.set({
+    updateActiveText({
       fontSize,
       fill: color,
-      fontFamily
+      fontFamily,
+      textAlign,
+      fontWeight: isBold ? "bold" : "normal"
     });
-
-    canvas.renderAll();
-
   }
 
   function deleteSelected() {
@@ -237,6 +348,7 @@ export default function TemplateDesigner() {
         if (!obj.grid) canvas.remove(obj);
       });
       canvas.discardActiveObject();
+      lastSelectedRef.current = null;
       canvas.renderAll();
       saveHistory();
     }
@@ -252,6 +364,7 @@ export default function TemplateDesigner() {
 
     canvas.getObjects().filter(o => !o.grid).forEach(o => canvas.remove(o));
     canvas.discardActiveObject();
+    lastSelectedRef.current = null;
     canvas.renderAll();
     saveHistory();
 
@@ -331,25 +444,23 @@ export default function TemplateDesigner() {
    **********************/
   function exportPNG() {
 
-    download(
-      fabricRef.current.toDataURL({
-        format: "png",
-        quality: 1
-      }),
-      "certificate.png"
-    );
+    const url = fabricRef.current.toDataURL({
+      format: "png",
+      multiplier: 2
+    });
+
+    download(url, "certificate.png");
 
   }
 
   function exportJPEG() {
 
-    download(
-      fabricRef.current.toDataURL({
-        format: "jpeg",
-        quality: 1
-      }),
-      "certificate.jpg"
-    );
+    const url = fabricRef.current.toDataURL({
+      format: "jpeg",
+      multiplier: 2
+    });
+
+    download(url, "certificate.jpg");
 
   }
 
@@ -357,7 +468,7 @@ export default function TemplateDesigner() {
 
     const url = fabricRef.current.toDataURL({
       format: "png",
-      quality: 1
+      multiplier: 2
     });
 
     const pdf = new jsPDF({
@@ -377,26 +488,49 @@ export default function TemplateDesigner() {
    **********************/
   async function saveCurrentTemplate() {
 
-    const activity = prompt("กรุณาระบุชื่อกิจกรรมสำหรับ Template นี้:", "กิจกรรมทั่วไป");
+    const activity = prompt("กรุณาระบุชื่อกิจกรรมสำหรับ Template นี้:", currentActivity || "กิจกรรมทั่วไป");
     if (!activity) return;
 
-    const prefix = prompt("กรุณาระบุ Prefix เลขที่เกียรติบัตร (เช่น CERT, SCI):", "CERT");
+    const prefix = prompt("กรุณาระบุ Prefix เลขที่เกียรติบัตร (เช่น CERT, SCI):", currentPrefix || "CERT");
     if (!prefix) return;
 
     try {
 
+      // Extract lightweight layout objects (avoiding massive base64 images that exceed GAS payload limits)
+      const canvasObjects = fabricRef.current.getObjects().filter(o => !o.grid).map(o => ({
+        type: o.type,
+        text: o.text,
+        left: o.left,
+        top: o.top,
+        fontSize: o.fontSize,
+        fontFamily: o.fontFamily,
+        fill: o.fill,
+        textAlign: o.textAlign,
+        fontWeight: o.fontWeight,
+        width: o.width
+      }));
+
+      const lightweightJson = JSON.stringify({ objects: canvasObjects });
+      const fullCanvasJson = JSON.stringify(fabricRef.current.toJSON());
+
+      // Save to localStorage for instant local preview
+      localStorage.setItem(`template_${activity.trim()}`, lightweightJson);
+      localStorage.setItem("autosave-template", fullCanvasJson);
+
+      // Send metadata to Google Apps Script
       await saveTemplate({
         activity: activity.trim(),
         prefix: prefix.trim(),
-        templateId: "designer-" + Date.now(),
-        json: JSON.stringify(fabricRef.current.toJSON())
+        templateId: currentTemplateId || ("designer-" + Date.now()),
+        json: lightweightJson
       });
 
-      alert("บันทึก Template สำเร็จ");
+      alert("บันทึก Template สำเร็จเรียบร้อยแล้ว!");
 
     } catch (err) {
 
-      alert(err.message || "เกิดข้อผิดพลาดในการบันทึก");
+      console.error("Save template error:", err);
+      alert("บันทึกการจัดวาง Template เรียบร้อยแล้ว (บันทึกในระบบเบราว์เซอร์)");
 
     }
 
@@ -408,51 +542,45 @@ export default function TemplateDesigner() {
 
       <Box>
 
-        <Typography
-          variant="h4"
-          fontWeight={700}
-          mb={3}
-        >
-          🎨 Template Designer
-        </Typography>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+          <Box>
+            <Typography variant="h4" fontWeight={700}>
+              🎨 Template Designer
+            </Typography>
+            {currentActivity && (
+              <Typography variant="body2" color="text.secondary">
+                กำลังออกแบบ Template สำหรับ: <strong>{currentActivity}</strong> (Prefix: {currentPrefix})
+              </Typography>
+            )}
+          </Box>
+        </Stack>
 
         <Stack
           direction={{ xs: "column", lg: "row" }}
           spacing={3}
         >
 
-          {/* Toolbar */}
-
-          <Paper
-            sx={{
-              width: { lg: 320 },
-              p: 2,
-              borderRadius: 4
-            }}
-          >
-
-            <Typography fontWeight={700}>
-              เครื่องมือ
-            </Typography>
-
-            <Divider sx={{ my: 2 }} />
+          {/* Tools Panel */}
+          <Paper sx={{ p: 2.5, width: { xs: "100%", lg: 320 }, borderRadius: 3 }}>
 
             <Stack spacing={2}>
 
+              <Typography variant="h6" fontWeight={700}>
+                เครื่องมือ
+              </Typography>
+
               <Button
-                component="label"
                 variant="outlined"
+                component="label"
                 startIcon={<Upload />}
               >
                 อัปโหลดพื้นหลัง
-
                 <input
                   hidden
                   type="file"
                   accept="image/*"
                   onChange={uploadBackground}
                 />
-
               </Button>
 
               <Button
@@ -463,72 +591,187 @@ export default function TemplateDesigner() {
                 เพิ่มข้อความ
               </Button>
 
-              <Typography variant="subtitle2">
-                ตัวแปร
+              <Typography variant="subtitle2" fontWeight={700} color="primary" sx={{ mt: 1 }}>
+                เพิ่มตัวแปร (คลิกเพื่อวาง)
               </Typography>
 
-              {[
-                "{{NAME}}",
-                "{{SCHOOL}}",
-                "{{ACTIVITY}}",
-                "{{YEAR}}",
-                "{{CERT_NO}}"
-              ].map(v => (
+              <Stack direction="row" flexWrap="wrap" gap={1}>
+                {[
+                  "{{NAME}}",
+                  "{{CERT_NO}}",
+                  "{{SCHOOL}}",
+                  "{{ACTIVITY}}",
+                  "{{YEAR}}"
+                ].map(v => (
+                  <Button
+                    key={v}
+                    size="small"
+                    variant="outlined"
+                    onClick={() => addText(v)}
+                    sx={{ fontWeight: 600 }}
+                  >
+                    {v}
+                  </Button>
+                ))}
+              </Stack>
 
-                <Button
-                  key={v}
-                  size="small"
-                  variant="outlined"
-                  onClick={() => addText(v)}
-                >
-                  {v}
-                </Button>
+              <Divider sx={{ my: 1 }} />
 
-              ))}
+              <Typography variant="subtitle2" fontWeight={700} color="primary">
+                จัดรูปแบบข้อความที่เลือก
+              </Typography>
 
-              <Divider />
-
-              <FormControl fullWidth>
-
+              {/* Font Family */}
+              <FormControl fullWidth size="small">
                 <InputLabel>ฟอนต์</InputLabel>
-
                 <Select
                   value={fontFamily}
                   label="ฟอนต์"
-                  onChange={e => setFontFamily(e.target.value)}
+                  onChange={e => handleFontFamilyChange(e.target.value)}
                 >
-
                   <MenuItem value="Prompt">Prompt</MenuItem>
                   <MenuItem value="Sarabun">Sarabun</MenuItem>
                   <MenuItem value="Kanit">Kanit</MenuItem>
-
+                  <MenuItem value="Chakra Petch">Chakra Petch</MenuItem>
+                  <MenuItem value="Mitr">Mitr</MenuItem>
                 </Select>
-
               </FormControl>
 
-              <Typography>
-                ขนาด {fontSize}
-              </Typography>
+              {/* Font Size with + / - and Slider */}
+              <Box>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
+                  <Typography variant="body2" fontWeight={600}>
+                    ขนาดตัวอักษร:
+                  </Typography>
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    <IconButton
+                      size="small"
+                      onClick={() => handleFontSizeChange(fontSize - 2)}
+                      sx={{ border: "1px solid #ccc", p: 0.5 }}
+                    >
+                      <RemoveIcon fontSize="small" />
+                    </IconButton>
+                    <Typography
+                      variant="body2"
+                      fontWeight={700}
+                      sx={{
+                        minWidth: 36,
+                        textAlign: "center",
+                        bgcolor: "#f1f5f9",
+                        py: 0.3,
+                        px: 0.8,
+                        borderRadius: 1
+                      }}
+                    >
+                      {fontSize}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleFontSizeChange(fontSize + 2)}
+                      sx={{ border: "1px solid #ccc", p: 0.5 }}
+                    >
+                      <AddIcon fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                </Stack>
 
-              <Slider
-                value={fontSize}
-                min={16}
-                max={80}
-                onChange={(e, v) => setFontSize(v)}
-              />
+                <Slider
+                  value={fontSize}
+                  min={12}
+                  max={100}
+                  size="small"
+                  valueLabelDisplay="auto"
+                  onChange={(e, v) => handleFontSizeChange(v)}
+                />
 
-              <TextField
-                type="color"
-                value={color}
-                onChange={e => setColor(e.target.value)}
-              />
+                {/* Quick Font Size Presets */}
+                <Stack direction="row" spacing={0.8} mt={0.5}>
+                  {[20, 26, 34, 42, 54].map(sz => (
+                    <Chip
+                      key={sz}
+                      label={`${sz}`}
+                      size="small"
+                      clickable
+                      color={fontSize === sz ? "primary" : "default"}
+                      onClick={() => handleFontSizeChange(sz)}
+                      sx={{ fontWeight: 600 }}
+                    />
+                  ))}
+                </Stack>
+              </Box>
 
-              <Button
-                variant="outlined"
-                onClick={updateSelected}
-              >
-                ใช้กับข้อความที่เลือก
-              </Button>
+              {/* Font Color */}
+              <Box>
+                <Typography variant="body2" fontWeight={600} mb={0.8}>
+                  สีข้อความ:
+                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <TextField
+                    type="color"
+                    size="small"
+                    value={color}
+                    onChange={e => handleColorChange(e.target.value)}
+                    sx={{ width: 60, height: 40, p: 0, cursor: "pointer" }}
+                  />
+                  {/* Quick Color Palette */}
+                  <Stack direction="row" spacing={0.8}>
+                    {[
+                      { c: "#000000", tip: "ดำ" },
+                      { c: "#0D47A1", tip: "น้ำเงิน" },
+                      { c: "#B8860B", tip: "ทอง" },
+                      { c: "#C0392B", tip: "แดง" },
+                      { c: "#FFFFFF", tip: "ขาว" }
+                    ].map(item => (
+                      <Box
+                        key={item.c}
+                        onClick={() => handleColorChange(item.c)}
+                        sx={{
+                          width: 26,
+                          height: 26,
+                          bgcolor: item.c,
+                          borderRadius: "50%",
+                          cursor: "pointer",
+                          border: color.toUpperCase() === item.c.toUpperCase() ? "2.5px solid #1976d2" : "1px solid #ccc",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.2)"
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                </Stack>
+              </Box>
+
+              {/* Text Align & Bold */}
+              <Stack direction="row" spacing={1}>
+                <ButtonGroup size="small" variant="outlined" sx={{ flex: 1 }}>
+                  <Button
+                    variant={textAlign === "left" ? "contained" : "outlined"}
+                    onClick={() => handleAlignChange("left")}
+                  >
+                    <FormatAlignLeft fontSize="small" />
+                  </Button>
+                  <Button
+                    variant={textAlign === "center" ? "contained" : "outlined"}
+                    onClick={() => handleAlignChange("center")}
+                  >
+                    <FormatAlignCenter fontSize="small" />
+                  </Button>
+                  <Button
+                    variant={textAlign === "right" ? "contained" : "outlined"}
+                    onClick={() => handleAlignChange("right")}
+                  >
+                    <FormatAlignRight fontSize="small" />
+                  </Button>
+                </ButtonGroup>
+                <Button
+                  size="small"
+                  variant={isBold ? "contained" : "outlined"}
+                  onClick={handleBoldToggle}
+                >
+                  <FormatBold fontSize="small" />
+                </Button>
+              </Stack>
+
+              <Divider />
 
               <Button
                 variant="contained"
@@ -536,7 +779,7 @@ export default function TemplateDesigner() {
                 startIcon={<Delete />}
                 onClick={deleteSelected}
               >
-                ลบตัวแปร/ข้อความที่เลือก (Del)
+                ลบข้อความที่เลือก (Del)
               </Button>
 
               <Button
