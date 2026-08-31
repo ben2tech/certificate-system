@@ -19,10 +19,7 @@ export default function CertificatePreview({
   background = "https://drive.google.com/thumbnail?id=1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA&sz=w1600",
   templateJson = null,
 }) {
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const [imgError, setImgError] = useState(false);
-
-  const isTemplateMode = imgLoaded && !imgError;
+  const isTemplateMode = Boolean(background);
 
   // รวม Prefix กับเลขที่เกียรติบัตร (ถ้ามี Prefix)
   const displayCertNo = useMemo(() => {
@@ -90,14 +87,11 @@ export default function CertificatePreview({
       }}
     >
       {/* Background Image — รูปพื้นหลัง Template ของกิจกรรม */}
-      {background && !imgError && (
+      {background && (
         <Box
           component="img"
           src={background}
-          crossOrigin="anonymous"
           alt="certificate background"
-          onLoad={() => setImgLoaded(true)}
-          onError={() => setImgError(true)}
           sx={{
             position: "absolute",
             inset: 0,
@@ -105,7 +99,6 @@ export default function CertificatePreview({
             height: "100%",
             objectFit: "cover",
             zIndex: 0,
-            display: imgLoaded ? "block" : "none",
           }}
         />
       )}
