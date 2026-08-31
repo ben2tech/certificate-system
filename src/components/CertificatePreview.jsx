@@ -64,6 +64,7 @@ export async function generateCertificatePngDataUrl({
       const fontWeight = obj.fontWeight || 700;
       const fontFamily = obj.fontFamily || "Prompt";
       const fill = typeof obj.fill === "string" ? obj.fill : "#0F172A";
+      const textAlign = obj.textAlign || "left";
       let x = (obj.left || 0) * scale;
       if (textAlign === "center") {
         if (obj.width && obj.width > 50) {
@@ -181,13 +182,18 @@ export default function CertificatePreview({
       certNo: String(certNo || "").trim(),
       background,
       customVariables,
-    }).then((url) => {
-      if (active) {
-        setPngUrl(url);
-        setLoading(false);
-        if (onPngGenerated) onPngGenerated(url);
-      }
-    });
+    })
+      .then((url) => {
+        if (active) {
+          setPngUrl(url);
+          setLoading(false);
+          if (onPngGenerated) onPngGenerated(url);
+        }
+      })
+      .catch((err) => {
+        console.error("Certificate generation error:", err);
+        if (active) setLoading(false);
+      });
 
     return () => {
       active = false;
