@@ -16,7 +16,7 @@ export default function CertificatePreview({
   year = "",
   certNo = "",
   prefix = "",
-  background = "https://drive.google.com/thumbnail?id=1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA&sz=w1600",
+  background = "https://lh3.googleusercontent.com/d/1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA=w1600",
   templateJson = null,
 }) {
   const isTemplateMode = Boolean(background);
@@ -80,6 +80,7 @@ export default function CertificatePreview({
         borderRadius: 2,
         boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
         fontFamily: "'Prompt', 'Sarabun', sans-serif",
+        bgcolor: "#ffffff",
       }}
     >
       {/* Background Image — รูปพื้นหลัง Template ของกิจกรรม */}
@@ -87,6 +88,7 @@ export default function CertificatePreview({
         <Box
           component="img"
           src={background}
+          crossOrigin="anonymous"
           alt="certificate background"
           sx={{
             position: "absolute",

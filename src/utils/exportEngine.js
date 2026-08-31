@@ -45,7 +45,7 @@ export async function downloadCertificateImage(element, fileName = "เกีย
   const canvas = await html2canvas(target, {
     scale: 2,
     useCORS: true,
-    allowTaint: true,
+    allowTaint: false,
     backgroundColor: "#ffffff",
     logging: false
   });
@@ -61,7 +61,7 @@ export async function downloadCertificatePDF(element, fileName = "เกีย�
   const canvas = await html2canvas(target, {
     scale: 2,
     useCORS: true,
-    allowTaint: true,
+    allowTaint: false,
     backgroundColor: "#ffffff",
     logging: false
   });

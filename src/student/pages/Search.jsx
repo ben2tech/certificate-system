@@ -56,7 +56,7 @@ export default function Search() {
       .catch((err) => console.log("Load templates notice:", err));
   }, []);
 
-  const DEFAULT_BACKGROUND = "https://drive.google.com/thumbnail?id=1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA&sz=w1600";
+  const DEFAULT_BACKGROUND = "https://lh3.googleusercontent.com/d/1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA=w1600";
 
   function findTemplate(c) {
     if (!templates || templates.length === 0) return null;
@@ -107,7 +107,7 @@ export default function Search() {
         return id;
       }
       if (!id.startsWith("designer-") && !id.startsWith("test-")) {
-        return `https://drive.google.com/thumbnail?id=${id}&sz=w1600`;
+        return `https://lh3.googleusercontent.com/d/${id}=w1600`;
       }
     }
     return DEFAULT_BACKGROUND;
