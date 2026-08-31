@@ -425,45 +425,105 @@ export default function Search() {
         PaperProps={{
           sx: {
             borderRadius: { xs: 0, sm: 3 },
-            bgcolor: "#0f172a",
-            maxWidth: "95vw",
-            maxHeight: "95vh",
-            m: { xs: 0, sm: 2 }
+            bgcolor: "#0b1329",
+            maxWidth: "96vw",
+            maxHeight: "96vh",
+            m: { xs: 0, sm: 2 },
+            display: "flex",
+            flexDirection: "column",
           }
         }}
       >
+        {/* Top Control Bar in Modal */}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: { xs: "stretch", sm: "center" },
+            justifyContent: "space-between",
+            gap: 1.5,
+            p: 2,
+            px: { xs: 2, sm: 3 },
+            bgcolor: "rgba(15, 23, 42, 0.95)",
+            borderBottom: "1px solid rgba(255,255,255,0.1)",
+            zIndex: 10,
+          }}
+        >
+          <Typography variant="h6" color="white" fontWeight={700} sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}>
+            📜 เกียรติบัตร: {selectedCert?.name || ""}
+          </Typography>
+
+          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+            {selectedCert && (
+              <>
+                <Button
+                  variant="contained"
+                  size="medium"
+                  startIcon={<ImageIcon />}
+                  onClick={() =>
+                    downloadCertificateImage(
+                      "fullscreen-cert-element",
+                      `เกียรติบัตร_${selectedCert.name || studentId}_${selectedCert.activity || ""}.png`
+                    )
+                  }
+                  sx={{
+                    background: "linear-gradient(135deg, #1976D2 0%, #0D47A1 100%)",
+                    fontWeight: 700,
+                    px: { xs: 2, sm: 3 },
+                    boxShadow: "0 4px 14px rgba(25, 118, 210, 0.4)",
+                  }}
+                >
+                  บันทึกรูปภาพ (PNG)
+                </Button>
+
+                <Button
+                  variant="contained"
+                  size="medium"
+                  startIcon={<PictureAsPdf />}
+                  onClick={() =>
+                    downloadCertificatePDF(
+                      "fullscreen-cert-element",
+                      `เกียรติบัตร_${selectedCert.name || studentId}_${selectedCert.activity || ""}.pdf`
+                    )
+                  }
+                  sx={{
+                    background: "linear-gradient(135deg, #FF6F00 0%, #E65100 100%)",
+                    fontWeight: 700,
+                    px: { xs: 2, sm: 3 },
+                    boxShadow: "0 4px 14px rgba(230, 81, 0, 0.4)",
+                  }}
+                >
+                  ดาวน์โหลด PDF
+                </Button>
+              </>
+            )}
+
+            <IconButton
+              onClick={closeFullscreen}
+              sx={{
+                bgcolor: "rgba(255,255,255,0.15)",
+                color: "white",
+                "&:hover": { bgcolor: "rgba(255,255,255,0.3)" }
+              }}
+            >
+              <Close />
+            </IconButton>
+          </Stack>
+        </Box>
+
         <DialogContent
           sx={{
-            p: { xs: 2, sm: 4 },
+            p: { xs: 1.5, sm: 3 },
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
-            position: "relative",
-            minHeight: { xs: "70vh", sm: "auto" }
+            justifyContent: "flex-start",
+            overflowY: "auto",
+            flexGrow: 1,
           }}
         >
-          {/* Close Button */}
-          <IconButton
-            onClick={closeFullscreen}
-            sx={{
-              position: "absolute",
-              top: 12,
-              right: 12,
-              bgcolor: "rgba(255,255,255,0.15)",
-              color: "white",
-              zIndex: 10,
-              "&:hover": {
-                bgcolor: "rgba(255,255,255,0.3)"
-              }
-            }}
-          >
-            <Close />
-          </IconButton>
-
-          {/* Certificate Preview — full size */}
           {selectedCert && (
-            <Box sx={{ width: "100%", maxWidth: 1100, mt: 2 }}>
+            <Box sx={{ width: "100%", maxWidth: 1100, my: "auto" }}>
               <CertificatePreview
                 id="fullscreen-cert-element"
                 name={selectedCert.name}
@@ -473,58 +533,6 @@ export default function Search() {
                 certNo={selectedCert.certNo}
                 background={getBackgroundForActivity(selectedCert.activity)}
               />
-
-              {/* Dialog Download Actions */}
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={2}
-                justifyContent="center"
-                mt={3}
-              >
-                <Button
-                  variant="contained"
-                  size="large"
-                  startIcon={<ImageIcon />}
-                  onClick={() =>
-                    downloadCertificateImage(
-                      "fullscreen-cert-element",
-                      `เกียรติบัตร_${selectedCert.name || studentId}.png`
-                    )
-                  }
-                  sx={{
-                    background: "linear-gradient(135deg, #1976D2 0%, #0D47A1 100%)",
-                    fontWeight: 700,
-                    px: 4,
-                    py: 1.2,
-                    fontSize: "1rem",
-                    boxShadow: "0 6px 20px rgba(25, 118, 210, 0.4)",
-                  }}
-                >
-                  บันทึกรูปภาพเกียรติบัตร (PNG)
-                </Button>
-
-                <Button
-                  variant="contained"
-                  size="large"
-                  startIcon={<PictureAsPdf />}
-                  onClick={() =>
-                    downloadCertificatePDF(
-                      "fullscreen-cert-element",
-                      `เกียรติบัตร_${selectedCert.name || studentId}.pdf`
-                    )
-                  }
-                  sx={{
-                    background: "linear-gradient(135deg, #FF6F00 0%, #E65100 100%)",
-                    fontWeight: 700,
-                    px: 4,
-                    py: 1.2,
-                    fontSize: "1rem",
-                    boxShadow: "0 6px 20px rgba(230, 81, 0, 0.4)",
-                  }}
-                >
-                  ดาวน์โหลดเป็น PDF
-                </Button>
-              </Stack>
             </Box>
           )}
         </DialogContent>
