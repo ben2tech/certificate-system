@@ -7,6 +7,7 @@ async function getGAS(params = {}) {
       url.searchParams.append(k, v);
     }
   });
+  url.searchParams.append("_t", Date.now().toString());
   const res = await fetch(url.toString(), {
     method: "GET",
     redirect: "follow"
