@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Box, CircularProgress } from "@mui/material";
 
 /**
@@ -77,13 +77,13 @@ export async function generateCertificatePngDataUrl({
     });
   } else {
     // ตำแหน่งมาตรฐานที่คำนวณตำแหน่งช่องว่างของใบประกาศเกียรติบัตรอย่างแม่นยำ 100%
-    // 1. เลขที่เกียรติบัตร (อยู่ด้านขวา ตรงข้างๆ คำว่า "เลขที่" ใน Template)
+    // 1. เลขที่เกียรติบัตร (อยู่มุมขวาบน ตรงกับแนวคำว่า "เลขที่" ใน Template)
     if (certNo) {
       ctx.font = `600 ${Math.round(15 * scale)}px 'Sarabun', 'Prompt', sans-serif`;
       ctx.fillStyle = "#334155";
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      ctx.fillText(certNo, canvas.width * 0.672, canvas.height * 0.292);
+      ctx.fillText(certNo, canvas.width * 0.772, canvas.height * 0.081);
     }
 
     // 2. ชื่อผู้ได้รับเกียรติบัตร (กึ่งกลาง ระหว่างคำว่า "ขอมอบเกียรติบัตรฉบับนี้ไว้เพื่อแสดงว่า" และ "ได้เข้าร่วม...")
@@ -92,7 +92,7 @@ export async function generateCertificatePngDataUrl({
       ctx.fillStyle = "#0D47A1";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(name, canvas.width / 2, canvas.height * 0.508);
+      ctx.fillText(name, canvas.width / 2, canvas.height * 0.468);
     }
   }
 
