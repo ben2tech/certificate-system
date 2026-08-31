@@ -21,15 +21,11 @@ export default function CertificatePreview({
 }) {
   const isTemplateMode = Boolean(background);
 
-  // รวม Prefix กับเลขที่เกียรติบัตร (ถ้ามี Prefix)
+  // ใช้เลขที่เกียรติบัตรตรงตาม Column H ใน Google Sheet เป๊ะ ๆ
   const displayCertNo = useMemo(() => {
     if (!certNo) return "";
-    const str = String(certNo).trim();
-    if (prefix && prefix.trim() && !str.toLowerCase().startsWith(prefix.trim().toLowerCase())) {
-      return `${prefix.trim()} ${str}`;
-    }
-    return str;
-  }, [certNo, prefix]);
+    return String(certNo).trim();
+  }, [certNo]);
 
   // ดึงตำแหน่งตัวแปรจาก Template ที่ส่งมาจาก API (Google Sheet) หรือ Designer (localStorage)
   const customVariables = useMemo(() => {
