@@ -66,37 +66,21 @@ export default function Search() {
     const certTemplate = String(c?.template || "").trim().toLowerCase();
     const certActivity = String(c?.activity || "").trim().toLowerCase();
 
-    // Priority 1: Match by Template column (Column G in Sheet, e.g. "SCI2569" matches prefix "sci2569")
-    if (certTemplate) {
-      const match = templates.find(
-        (t) =>
-          (t.prefix && t.prefix.trim().toLowerCase() === certTemplate) ||
-          (t.activity && t.activity.trim().toLowerCase() === certTemplate)
-      );
-      if (match) return match;
-    }
+    // รวบรวม Templates ทั้งหมดที่ตรงกับกิจกรรมหรือ Template นี้
+    const candidates = templates.filter((t) => {
+      const act = (t.activity || "").trim().toLowerCase();
+      const pfx = (t.prefix || "").trim().toLowerCase();
+      if (certTemplate && (pfx === certTemplate || act === certTemplate || certTemplate.includes(pfx) || pfx.includes(certTemplate))) return true;
+      if (certActivity && (act === certActivity || pfx === certActivity || act.includes(certActivity) || certActivity.includes(act))) return true;
+      if (certActivity.includes("วิทย์") && (act.includes("วิทย์") || pfx.includes("sci"))) return true;
+      return false;
+    });
 
-    // Priority 2: Match by Activity Name (Column F in Sheet)
-    if (certActivity) {
-      let match = templates.find(
-        (t) =>
-          (t.activity && t.activity.trim().toLowerCase() === certActivity) ||
-          (t.prefix && t.prefix.trim().toLowerCase() === certActivity)
-      );
-      if (match) return match;
-
-      // Priority 3: Fuzzy / Keyword Match
-      match = templates.find((t) => {
-        const act = (t.activity || "").trim().toLowerCase();
-        const pfx = (t.prefix || "").trim().toLowerCase();
-        return (
-          certActivity.includes(act) ||
-          act.includes(certActivity) ||
-          (certActivity.includes("วิทย์") && (act.includes("วิทย์") || pfx.includes("sci"))) ||
-          (certTemplate.includes("sci") && (act.includes("วิทย์") || pfx.includes("sci")))
-        );
-      });
-      if (match) return match;
+    if (candidates.length > 0) {
+      // ให้ความสำคัญสูงสุดกับ Template ที่มีข้อมูล JSON จาก Template Designer
+      const withJson = candidates.find((t) => t.json && t.json.trim() !== "" && t.json.trim() !== "{}");
+      if (withJson) return withJson;
+      return candidates[0];
     }
 
     return null;
@@ -112,6 +96,12 @@ export default function Search() {
       if (!id.startsWith("designer-") && !id.startsWith("test-")) {
         return `https://lh3.googleusercontent.com/d/${id}=w1600`;
       }
+    }
+    const driveTemplate = templates.find(
+      (t) => t.templateId && !t.templateId.startsWith("designer-") && !t.templateId.startsWith("test-")
+    );
+    if (driveTemplate) {
+      return `https://lh3.googleusercontent.com/d/${driveTemplate.templateId.trim()}=w1600`;
     }
     return DEFAULT_BACKGROUND;
   }
