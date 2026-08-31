@@ -73,6 +73,15 @@ export default function Search() {
     return "/cert-bg.png";
   }
 
+  function getTemplateJsonForActivity(activityName) {
+    if (!activityName || !templates || templates.length === 0) return null;
+    const cleanName = activityName.trim().toLowerCase();
+    const match = templates.find(
+      (t) => t.activity && t.activity.trim().toLowerCase() === cleanName
+    );
+    return match?.json || null;
+  }
+
   async function handleSearch() {
     if (!studentId.trim()) {
       alert("กรุณากรอกรหัสนักเรียน");
@@ -303,6 +312,7 @@ export default function Search() {
                                     year={year}
                                     certNo={c.certNo}
                                     background={getBackgroundForActivity(c.activity)}
+                                    templateJson={getTemplateJsonForActivity(c.activity)}
                                   />
 
                                   {/* Zoom hint overlay */}
@@ -532,6 +542,7 @@ export default function Search() {
                 year={selectedYear}
                 certNo={selectedCert.certNo}
                 background={getBackgroundForActivity(selectedCert.activity)}
+                templateJson={getTemplateJsonForActivity(selectedCert.activity)}
               />
             </Box>
           )}

@@ -16,15 +16,28 @@ export default function CertificatePreview({
   year = "",
   certNo = "",
   background = "/cert-bg.png",
+  templateJson = null,
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   const isTemplateMode = imgLoaded && !imgError;
 
-  // ดึงตำแหน่งตัวแปรจาก Template ที่ Admin ออกแบบไว้ใน Designer (ถ้ามี)
+  // ดึงตำแหน่งตัวแปรจาก Template ที่ส่งมาจาก API (Google Sheet) หรือ Designer (localStorage)
   const customVariables = useMemo(() => {
     try {
+      // 1. ตรวจสอบข้อมูล json ที่ส่งมาจาก API Database (Google Sheet)
+      if (templateJson) {
+        const parsed = typeof templateJson === "string" ? JSON.parse(templateJson) : templateJson;
+        if (parsed && Array.isArray(parsed.objects) && parsed.objects.length > 0) {
+          const vars = parsed.objects.filter(
+            (o) => o.text && (o.text.includes("{{") || !o.grid)
+          );
+          if (vars.length > 0) return vars;
+        }
+      }
+
+      // 2. ตรวจสอบข้อมูลจาก localStorage ในเครื่อง
       const keys = [
         activity ? `template_${activity.trim()}` : null,
         "autosave-template",
@@ -46,7 +59,7 @@ export default function CertificatePreview({
       console.log("Template config parse notice:", e);
     }
     return null;
-  }, [activity]);
+  }, [activity, templateJson]);
 
   return (
     <Box
@@ -148,6 +161,7 @@ export default function CertificatePreview({
                     fontSize: "clamp(8px, 1.25vw, 15px)",
                     fontWeight: 600,
                     color: "#1e293b",
+                    fontFamily: "'Sarabun', 'Prompt', sans-serif",
                     letterSpacing: "0.5px",
                   }}
                 >
@@ -168,9 +182,10 @@ export default function CertificatePreview({
               >
                 <Typography
                   sx={{
-                    fontSize: "clamp(15px, 3.1vw, 36px)",
+                    fontSize: "clamp(14px, 2.8vw, 32px)",
                     fontWeight: 700,
-                    color: "#0F172A",
+                    color: "#0D47A1",
+                    fontFamily: "'Sarabun', 'Prompt', sans-serif",
                     lineHeight: 1.2,
                     letterSpacing: "0.2px",
                     textShadow: "0 1px 2px rgba(255,255,255,0.95)",
