@@ -135,7 +135,16 @@ export default function Search() {
     setLoading(true);
 
     try {
-      const res = await searchCertificate(studentId.trim());
+      // ดึงข้อมูลเกียรติบัตรพร้อมกับ Template ล่าสุดจาก Google Sheet แบบ Real-time
+      const [res, tplRes] = await Promise.all([
+        searchCertificate(studentId.trim()),
+        getTemplates().catch(() => null),
+      ]);
+
+      if (tplRes && tplRes.data) {
+        setTemplates(tplRes.data);
+      }
+
       setResult(res.data || {});
     } catch {
       alert("ค้นหาไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
