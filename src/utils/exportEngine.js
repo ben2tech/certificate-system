@@ -1,4 +1,4 @@
-import html2canvas from "html2canvas";
+﻿import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
 export async function exportPNG(canvas) {
@@ -42,6 +42,14 @@ export async function downloadCertificateImage(element, fileName = "เกีย
   const target = typeof element === "string" ? document.getElementById(element) : element;
   if (!target) return;
 
+  // 1. ถ้ามี <img> ที่เรนเดอร์ PNG ใน Memory ไว้แล้ว ให้ดาวน์โหลดไฟล์นั้นได้ทันที 100%
+  const imgEl = target.querySelector ? target.querySelector("img") : (target.tagName === "IMG" ? target : null);
+  if (imgEl && imgEl.src && imgEl.src.startsWith("data:image/png")) {
+    download(imgEl.src, fileName);
+    return;
+  }
+
+  // 2. Fallback
   const canvas = await html2canvas(target, {
     scale: 2,
     useCORS: true,
@@ -58,22 +66,28 @@ export async function downloadCertificatePDF(element, fileName = "เกีย�
   const target = typeof element === "string" ? document.getElementById(element) : element;
   if (!target) return;
 
-  const canvas = await html2canvas(target, {
-    scale: 2,
-    useCORS: true,
-    allowTaint: false,
-    backgroundColor: "#ffffff",
-    logging: false
-  });
+  let imgData = null;
+  const imgEl = target.querySelector ? target.querySelector("img") : (target.tagName === "IMG" ? target : null);
+  if (imgEl && imgEl.src && imgEl.src.startsWith("data:image/png")) {
+    imgData = imgEl.src;
+  } else {
+    const canvas = await html2canvas(target, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: "#ffffff",
+      logging: false
+    });
+    imgData = canvas.toDataURL("image/png", 1.0);
+  }
 
-  const img = canvas.toDataURL("image/png", 1.0);
   const pdf = new jsPDF({
     orientation: "landscape",
     unit: "px",
-    format: [canvas.width, canvas.height]
+    format: [1600, 1131]
   });
 
-  pdf.addImage(img, "PNG", 0, 0, canvas.width, canvas.height);
+  pdf.addImage(imgData, "PNG", 0, 0, 1600, 1131);
   pdf.save(fileName);
 }
 
