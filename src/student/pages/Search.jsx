@@ -27,6 +27,9 @@ import {
   Download,
   PictureAsPdf,
   Image as ImageIcon,
+  EmojiEvents,
+  School,
+  Person,
 } from "@mui/icons-material";
 
 import { searchCertificate, getTemplates } from "../services/studentApi";
@@ -330,15 +333,74 @@ export default function Search() {
                                   boxShadow: "0 10px 35px rgba(0,0,0,0.3)",
                                   bgcolor: "rgba(255,255,255,0.03)",
                                   border: "1px solid rgba(255,255,255,0.1)",
-                                  p: { xs: 1.5, sm: 2.5 },
+                                  p: { xs: 2, sm: 3 },
                                 }}
                               >
+                                {/* Activity & Student Information Header */}
                                 <Box
                                   sx={{
+                                    mb: 2.5,
+                                    p: 2,
+                                    borderRadius: 2,
+                                    bgcolor: "rgba(255, 255, 255, 0.05)",
+                                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                                  }}
+                                >
+                                  <Stack
+                                    direction={{ xs: "column", sm: "row" }}
+                                    justifyContent="space-between"
+                                    alignItems={{ xs: "flex-start", sm: "center" }}
+                                    spacing={1.5}
+                                  >
+                                    <Box>
+                                      <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
+                                        <EmojiEvents sx={{ color: "#FFD700", fontSize: 24 }} />
+                                        <Typography variant="h6" sx={{ color: "#FFD700", fontWeight: 700, fontSize: { xs: "1rem", sm: "1.15rem" } }}>
+                                          {c.activity || "สัปดาห์วิทยาศาสตร์"}
+                                        </Typography>
+                                      </Stack>
+                                      <Stack direction="row" flexWrap="wrap" gap={1.5} alignItems="center">
+                                        {c.name && (
+                                          <Typography variant="body2" sx={{ color: "#E2E8F0", display: "flex", alignItems: "center", gap: 0.5 }}>
+                                            <Person sx={{ fontSize: 18, color: "#90CAF9" }} />
+                                            {c.name}
+                                          </Typography>
+                                        )}
+                                        {c.school && (
+                                          <Typography variant="body2" sx={{ color: "#CBD5E1", display: "flex", alignItems: "center", gap: 0.5 }}>
+                                            <School sx={{ fontSize: 18, color: "#A7F3D0" }} />
+                                            {c.school}
+                                          </Typography>
+                                        )}
+                                      </Stack>
+                                    </Box>
+
+                                    {c.certNo && (
+                                      <Chip
+                                        label={`เลขที่: ${c.certNo}`}
+                                        sx={{
+                                          bgcolor: "rgba(255, 215, 0, 0.15)",
+                                          color: "#FFD700",
+                                          fontWeight: 700,
+                                          fontSize: "0.85rem",
+                                          border: "1px solid rgba(255, 215, 0, 0.3)",
+                                        }}
+                                      />
+                                    )}
+                                  </Stack>
+                                </Box>
+
+                                {/* Compact Certificate Preview */}
+                                <Box
+                                  sx={{
+                                    width: "100%",
+                                    maxWidth: { xs: "100%", sm: 540, md: 620 },
+                                    mx: "auto",
                                     cursor: "pointer",
                                     position: "relative",
                                     borderRadius: 2,
                                     overflow: "hidden",
+                                    boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
                                     "&:hover .cert-zoom-hint": {
                                       opacity: 1,
                                     },
@@ -373,7 +435,7 @@ export default function Search() {
                                     }}
                                   >
                                     <Stack alignItems="center" spacing={0.5}>
-                                      <ZoomIn sx={{ fontSize: 48, color: "white" }} />
+                                      <ZoomIn sx={{ fontSize: 44, color: "white" }} />
                                       <Typography variant="body2" sx={{ color: "white", fontWeight: 700 }}>
                                         คลิกเพื่อดูขนาดเต็ม
                                       </Typography>
