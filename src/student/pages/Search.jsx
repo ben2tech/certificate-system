@@ -58,25 +58,49 @@ export default function Search() {
 
   const DEFAULT_BACKGROUND = "https://drive.google.com/thumbnail?id=1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA&sz=w1600";
 
-  function getBackgroundForActivity(activityName) {
-    if (!templates || templates.length === 0) return DEFAULT_BACKGROUND;
-    const cleanName = (activityName || "").trim().toLowerCase();
+  function findTemplate(c) {
+    if (!templates || templates.length === 0) return null;
+    const certTemplate = String(c?.template || "").trim().toLowerCase();
+    const certActivity = String(c?.activity || "").trim().toLowerCase();
 
-    // 1. Try exact match
-    let match = templates.find(
-      (t) => t.activity && t.activity.trim().toLowerCase() === cleanName
-    );
-
-    // 2. Try partial/keyword match (e.g. "วิทย์", "วิทยาศาสตร์")
-    if (!match) {
-      match = templates.find((t) => {
-        if (!t.activity) return false;
-        const act = t.activity.trim().toLowerCase();
-        return cleanName.includes(act) || act.includes(cleanName) ||
-          (cleanName.includes("วิทย์") && act.includes("วิทย์"));
-      });
+    // Priority 1: Match by Template column (Column G in Sheet, e.g. "SCI2569" matches prefix "sci2569")
+    if (certTemplate) {
+      const match = templates.find(
+        (t) =>
+          (t.prefix && t.prefix.trim().toLowerCase() === certTemplate) ||
+          (t.activity && t.activity.trim().toLowerCase() === certTemplate)
+      );
+      if (match) return match;
     }
 
+    // Priority 2: Match by Activity Name (Column F in Sheet)
+    if (certActivity) {
+      let match = templates.find(
+        (t) =>
+          (t.activity && t.activity.trim().toLowerCase() === certActivity) ||
+          (t.prefix && t.prefix.trim().toLowerCase() === certActivity)
+      );
+      if (match) return match;
+
+      // Priority 3: Fuzzy / Keyword Match
+      match = templates.find((t) => {
+        const act = (t.activity || "").trim().toLowerCase();
+        const pfx = (t.prefix || "").trim().toLowerCase();
+        return (
+          certActivity.includes(act) ||
+          act.includes(certActivity) ||
+          (certActivity.includes("วิทย์") && (act.includes("วิทย์") || pfx.includes("sci"))) ||
+          (certTemplate.includes("sci") && (act.includes("วิทย์") || pfx.includes("sci")))
+        );
+      });
+      if (match) return match;
+    }
+
+    return null;
+  }
+
+  function getBackgroundForCert(c) {
+    const match = findTemplate(c);
     if (match && match.templateId) {
       const id = match.templateId.trim();
       if (id.startsWith("http://") || id.startsWith("https://") || id.startsWith("/")) {
@@ -86,48 +110,17 @@ export default function Search() {
         return `https://drive.google.com/thumbnail?id=${id}&sz=w1600`;
       }
     }
-
     return DEFAULT_BACKGROUND;
   }
 
-  function getTemplateJsonForActivity(activityName) {
-    if (!templates || templates.length === 0) return null;
-    const cleanName = (activityName || "").trim().toLowerCase();
-
-    let match = templates.find(
-      (t) => t.activity && t.activity.trim().toLowerCase() === cleanName
-    );
-
-    if (!match) {
-      match = templates.find((t) => {
-        if (!t.activity) return false;
-        const act = t.activity.trim().toLowerCase();
-        return cleanName.includes(act) || act.includes(cleanName) ||
-          (cleanName.includes("วิทย์") && act.includes("วิทย์"));
-      });
-    }
-
+  function getTemplateJsonForCert(c) {
+    const match = findTemplate(c);
     return match?.json || null;
   }
 
-  function getPrefixForActivity(activityName) {
-    if (!templates || templates.length === 0) return "";
-    const cleanName = (activityName || "").trim().toLowerCase();
-
-    let match = templates.find(
-      (t) => t.activity && t.activity.trim().toLowerCase() === cleanName
-    );
-
-    if (!match) {
-      match = templates.find((t) => {
-        if (!t.activity) return false;
-        const act = t.activity.trim().toLowerCase();
-        return cleanName.includes(act) || act.includes(cleanName) ||
-          (cleanName.includes("วิทย์") && act.includes("วิทย์"));
-      });
-    }
-
-    return match?.prefix ? match.prefix.trim() : "";
+  function getPrefixForCert(c) {
+    const match = findTemplate(c);
+    return match?.prefix ? match.prefix.trim() : String(c?.template || "").trim();
   }
 
   async function handleSearch() {
@@ -359,9 +352,9 @@ export default function Search() {
                                     activity={c.activity}
                                     year={year}
                                     certNo={c.certNo}
-                                    prefix={getPrefixForActivity(c.activity)}
-                                    background={getBackgroundForActivity(c.activity)}
-                                    templateJson={getTemplateJsonForActivity(c.activity)}
+                                    prefix={getPrefixForCert(c)}
+                                    background={getBackgroundForCert(c)}
+                                    templateJson={getTemplateJsonForCert(c)}
                                   />
 
                                   {/* Zoom hint overlay */}
@@ -590,9 +583,9 @@ export default function Search() {
                 activity={selectedCert.activity}
                 year={selectedYear}
                 certNo={selectedCert.certNo}
-                prefix={getPrefixForActivity(selectedCert.activity)}
-                background={getBackgroundForActivity(selectedCert.activity)}
-                templateJson={getTemplateJsonForActivity(selectedCert.activity)}
+                prefix={getPrefixForCert(selectedCert)}
+                background={getBackgroundForCert(selectedCert)}
+                templateJson={getTemplateJsonForCert(selectedCert)}
               />
             </Box>
           )}

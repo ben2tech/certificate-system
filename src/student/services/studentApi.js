@@ -41,6 +41,7 @@ export async function searchCertificate(studentId, birthday = "") {
             school: item.school || "",
             activity: item.activity || "",
             certNo: item.certNo || "",
+            template: item.template || item.Template || "",
             studentId: item.studentId,
             year: item.year,
             preview: item.pdfId ? `https://drive.google.com/file/d/${item.pdfId}/preview` : "",
