@@ -15,6 +15,7 @@ export default function CertificatePreview({
   activity = "",
   year = "",
   certNo = "",
+  prefix = "",
   background = "https://drive.google.com/thumbnail?id=1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA&sz=w1600",
   templateJson = null,
 }) {
@@ -22,6 +23,16 @@ export default function CertificatePreview({
   const [imgError, setImgError] = useState(false);
 
   const isTemplateMode = imgLoaded && !imgError;
+
+  // รวม Prefix กับเลขที่เกียรติบัตร (ถ้ามี Prefix)
+  const displayCertNo = useMemo(() => {
+    if (!certNo) return "";
+    const str = String(certNo).trim();
+    if (prefix && prefix.trim() && !str.toLowerCase().startsWith(prefix.trim().toLowerCase())) {
+      return `${prefix.trim()} ${str}`;
+    }
+    return str;
+  }, [certNo, prefix]);
 
   // ดึงตำแหน่งตัวแปรจาก Template ที่ส่งมาจาก API (Google Sheet) หรือ Designer (localStorage)
   const customVariables = useMemo(() => {
@@ -117,7 +128,7 @@ export default function CertificatePreview({
               let textContent = obj.text || "";
               textContent = textContent
                 .replace(/\{\{NAME\}\}/g, name || "")
-                .replace(/\{\{CERT_NO\}\}/g, certNo || "")
+                .replace(/\{\{CERT_NO\}\}/g, displayCertNo || certNo || "")
                 .replace(/\{\{SCHOOL\}\}/g, school || "")
                 .replace(/\{\{ACTIVITY\}\}/g, activity || "")
                 .replace(/\{\{YEAR\}\}/g, String(year || ""));
@@ -153,7 +164,7 @@ export default function CertificatePreview({
             /* ตำแหน่ง Calibrated Default ที่คำนวณตำแหน่งอย่างแม่นยำ */
             <>
               {/* เลขที่เกียรติบัตร (มุมขวาบน ตรงกับแนว "เลขที่") */}
-              {certNo && (
+              {(displayCertNo || certNo) && (
                 <Typography
                   sx={{
                     position: "absolute",
@@ -167,7 +178,7 @@ export default function CertificatePreview({
                     letterSpacing: "0.5px",
                   }}
                 >
-                  {certNo}
+                  {displayCertNo || certNo}
                 </Typography>
               )}
 

@@ -110,6 +110,26 @@ export default function Search() {
     return match?.json || null;
   }
 
+  function getPrefixForActivity(activityName) {
+    if (!templates || templates.length === 0) return "";
+    const cleanName = (activityName || "").trim().toLowerCase();
+
+    let match = templates.find(
+      (t) => t.activity && t.activity.trim().toLowerCase() === cleanName
+    );
+
+    if (!match) {
+      match = templates.find((t) => {
+        if (!t.activity) return false;
+        const act = t.activity.trim().toLowerCase();
+        return cleanName.includes(act) || act.includes(cleanName) ||
+          (cleanName.includes("วิทย์") && act.includes("วิทย์"));
+      });
+    }
+
+    return match?.prefix ? match.prefix.trim() : "";
+  }
+
   async function handleSearch() {
     if (!studentId.trim()) {
       alert("กรุณากรอกรหัสนักเรียน");
@@ -339,6 +359,7 @@ export default function Search() {
                                     activity={c.activity}
                                     year={year}
                                     certNo={c.certNo}
+                                    prefix={getPrefixForActivity(c.activity)}
                                     background={getBackgroundForActivity(c.activity)}
                                     templateJson={getTemplateJsonForActivity(c.activity)}
                                   />
@@ -569,6 +590,7 @@ export default function Search() {
                 activity={selectedCert.activity}
                 year={selectedYear}
                 certNo={selectedCert.certNo}
+                prefix={getPrefixForActivity(selectedCert.activity)}
                 background={getBackgroundForActivity(selectedCert.activity)}
                 templateJson={getTemplateJsonForActivity(selectedCert.activity)}
               />
