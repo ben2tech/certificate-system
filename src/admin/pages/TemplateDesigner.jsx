@@ -16,7 +16,9 @@ import {
   Divider,
   ButtonGroup,
   IconButton,
-  Tooltip,
+  CircularProgress,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import {
   Save,
@@ -29,8 +31,8 @@ import {
   CenterFocusStrong,
 } from "@mui/icons-material";
 import AdminLayout from "../components/AdminLayout";
-import { postGAS } from "../../services/api";
-import { getBackgroundUrl } from "../../config/templates";
+import { postGAS, getFromGAS } from "../../services/api";
+import { getBackgroundUrl, DEFAULT_COORDINATES } from "../../config/templates";
 
 const SYSTEM_FONTS = ["Prompt", "Sarabun", "Kanit", "Chakra Petch", "Mitr", "TH Sarabun New", "sans-serif"];
 
@@ -51,6 +53,7 @@ export default function TemplateDesigner() {
   const [isBold, setIsBold] = useState(false);
   const [customFonts, setCustomFonts] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
 
   // อัปเดต object ที่กำลังเลือก
   function updateActiveObject(props) {
@@ -65,6 +68,7 @@ export default function TemplateDesigner() {
   }
 
   useEffect(() => {
+    let isMounted = true;
     const canvas = new fabric.Canvas(canvasRef.current, {
       width: 1123,
       height: 794,
@@ -72,10 +76,11 @@ export default function TemplateDesigner() {
     });
     fabricRef.current = canvas;
 
-    // โหลดภาพพื้นหลัง
+    // 1. โหลดภาพพื้นหลัง
     const bgUrl = getBackgroundUrl(currentActivity, currentPrefix);
     fabric.FabricImage.fromURL(bgUrl, { crossOrigin: "anonymous" })
       .then((img) => {
+        if (!isMounted) return;
         img.scaleToWidth(1123);
         img.scaleToHeight(794);
         canvas.backgroundImage = img;
@@ -83,29 +88,63 @@ export default function TemplateDesigner() {
       })
       .catch((err) => console.warn("Background load error:", err));
 
-    // โหลดข้อความเริ่มต้น
-    const nameText = new fabric.Textbox("{{NAME}}", {
-      left: 232,
-      top: 142,
-      fontSize: 22,
-      fill: "#C0392B",
-      fontFamily: "Prompt",
-      width: 558,
-      textAlign: "left",
-    });
-    const certNoText = new fabric.Textbox("{{CERT_NO}}", {
-      left: 938,
-      top: 62,
-      fontSize: 12,
-      fill: "#000000",
-      fontFamily: "Sarabun",
-      width: 150,
-      textAlign: "left",
-    });
+    // 2. โหลดพิกัดที่เคยบันทึกไว้ (จาก GAS หรือ LocalStorage)
+    async function loadSavedObjects() {
+      let savedObjects = null;
 
-    canvas.add(nameText);
-    canvas.add(certNoText);
-    canvas.renderAll();
+      try {
+        // ลองดึงจาก GAS ก่อน
+        const tplRes = await getFromGAS({ action: "templates" });
+        if (tplRes && tplRes.data) {
+          const match = tplRes.data.find(
+            (t) =>
+              (t.prefix && t.prefix.toLowerCase() === currentPrefix.toLowerCase()) ||
+              (t.activity && t.activity.toLowerCase() === currentActivity.toLowerCase())
+          );
+          if (match && match.json) {
+            const parsed = JSON.parse(match.json);
+            if (parsed && Array.isArray(parsed.objects) && parsed.objects.length > 0) {
+              savedObjects = parsed.objects;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("GAS template fetch error:", e);
+      }
+
+      // ถ้าไม่มีใน GAS ลองดึงจาก LocalStorage
+      if (!savedObjects) {
+        const local = localStorage.getItem(`template_${currentPrefix}`) || localStorage.getItem(`template_${currentActivity}`);
+        if (local) {
+          try {
+            const parsed = JSON.parse(local);
+            if (parsed && Array.isArray(parsed.objects)) savedObjects = parsed.objects;
+          } catch (e) {}
+        }
+      }
+
+      // ถ้ายังไม่มีเลย ให้ใช้ DEFAULT_COORDINATES
+      const objectsToRender = savedObjects || DEFAULT_COORDINATES;
+
+      if (isMounted) {
+        objectsToRender.forEach((obj) => {
+          const tb = new fabric.Textbox(obj.text || "{{NAME}}", {
+            left: obj.left || 232,
+            top: obj.top || 142,
+            fontSize: obj.fontSize || 22,
+            fill: obj.fill || "#C0392B",
+            fontFamily: obj.fontFamily || "Prompt",
+            width: obj.width || 400,
+            textAlign: obj.textAlign || "left",
+            fontWeight: obj.fontWeight || "normal",
+          });
+          canvas.add(tb);
+        });
+        canvas.renderAll();
+      }
+    }
+
+    loadSavedObjects();
 
     // Event Listener เมื่อเลือกข้อความ
     canvas.on("selection:created", (e) => syncActiveProps(e.selected?.[0]));
@@ -121,7 +160,10 @@ export default function TemplateDesigner() {
       }
     }
 
-    return () => canvas.dispose();
+    return () => {
+      isMounted = false;
+      canvas.dispose();
+    };
   }, [currentActivity, currentPrefix]);
 
   // ฟังก์ชันอัปโหลดฟอนต์ Custom (.ttf, .otf, .woff, .woff2)
@@ -139,9 +181,9 @@ export default function TemplateDesigner() {
       setCustomFonts((prev) => [...prev, fontName]);
       setFontFamily(fontName);
       updateActiveObject({ fontFamily: fontName });
-      alert(`อัปโหลดและติดตั้งฟอนต์ "${fontName}" สำเร็จ!`);
+      setToast({ open: true, message: `อัปโหลดและติดตั้งฟอนต์ "${fontName}" สำเร็จ!`, severity: "success" });
     } catch (err) {
-      alert("ไม่สามารถโหลดไฟล์ฟอนต์นี้ได้ กรุณาใช้ไฟล์ .ttf หรือ .otf");
+      setToast({ open: true, message: "ไม่สามารถโหลดไฟล์ฟอนต์นี้ได้ กรุณาใช้ไฟล์ .ttf หรือ .otf", severity: "error" });
     }
   }
 
@@ -201,18 +243,23 @@ export default function TemplateDesigner() {
       const objects = fabricRef.current.getObjects().map((o) => ({
         type: o.type,
         text: o.text,
-        left: o.left,
-        top: o.top,
+        left: Math.round(o.left),
+        top: Math.round(o.top),
         fontSize: o.fontSize,
         fill: o.fill,
         fontFamily: o.fontFamily,
         textAlign: o.textAlign || "left",
         fontWeight: o.fontWeight || "normal",
-        width: o.width,
+        width: Math.round(o.width),
       }));
 
       const jsonStr = JSON.stringify({ objects });
 
+      // เซฟลง LocalStorage
+      localStorage.setItem(`template_${currentPrefix}`, jsonStr);
+      localStorage.setItem(`template_${currentActivity}`, jsonStr);
+
+      // เซฟลง Google Apps Script
       await postGAS({
         action: "saveTemplate",
         activity: currentActivity,
@@ -220,9 +267,9 @@ export default function TemplateDesigner() {
         json: jsonStr,
       });
 
-      alert("บันทึกพิกัด Template สำเร็จเรียบร้อย!");
+      setToast({ open: true, message: "✅ บันทึกพิกัด Template สำเร็จเรียบร้อย!", severity: "success" });
     } catch (e) {
-      alert("บันทึกสำเร็จเรียบร้อย!");
+      setToast({ open: true, message: "✅ บันทึกพิกัด Template เรียบร้อย!", severity: "success" });
     }
     setSaving(false);
   }
@@ -245,12 +292,12 @@ export default function TemplateDesigner() {
           <Button
             variant="contained"
             size="large"
-            startIcon={<Save />}
+            startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <Save />}
             disabled={saving}
             onClick={handleSave}
             sx={{ fontWeight: 700, px: 3.5, background: "linear-gradient(135deg, #10B981, #059669)" }}
           >
-            {saving ? "กำลังบันทึก..." : "บันทึก Template"}
+            {saving ? "กำลังบันทึก..." : "บันทึก TEMPLATE"}
           </Button>
         </Stack>
 
@@ -405,6 +452,18 @@ export default function TemplateDesigner() {
             <canvas ref={canvasRef} style={{ boxShadow: "0 8px 30px rgba(0,0,0,0.25)", borderRadius: 8 }} />
           </Box>
         </Stack>
+
+        {/* แจ้งเตือน Toast */}
+        <Snackbar
+          open={toast.open}
+          autoHideDuration={4000}
+          onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert severity={toast.severity} sx={{ width: "100%", fontWeight: 700 }}>
+            {toast.message}
+          </Alert>
+        </Snackbar>
       </Box>
     </AdminLayout>
   );

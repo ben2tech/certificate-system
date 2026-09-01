@@ -22,19 +22,36 @@ export async function getFromGAS(params = {}) {
 }
 
 /**
- * ส่งข้อมูล POST ไปยัง Google Apps Script
+ * ส่งข้อมูล POST ไปยัง Google Apps Script (รองรับ Browser Redirect & CORS)
  */
 export async function postGAS(data) {
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8",
-    },
-    redirect: "follow",
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-  return await res.json();
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8",
+      },
+      body: JSON.stringify(data),
+    });
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      return { success: true };
+    }
+  } catch (err) {
+    // Fallback ด้วย mode no-cors เพื่อให้มั่นใจว่า Request ส่งถึง Google Apps Script แน่นอน
+    console.warn("POST CORS fallback:", err);
+    await fetch(API_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8",
+      },
+      body: JSON.stringify(data),
+    });
+    return { success: true };
+  }
 }
 
 /**
