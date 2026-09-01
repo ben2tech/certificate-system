@@ -1,44 +1,63 @@
 /**
- * Fallback Template Config
- * ใช้เมื่อ Google Apps Script ยังไม่มีข้อมูล JSON สำหรับกิจกรรมนี้
- * ภาพพื้นหลังจะดึงจาก /cer/ชื่องาน.png อัตโนมัติ
+ * การตั้งค่า Template และพิกัดเริ่มต้นสำหรับเกียรติบัตร
+ * ภาพพื้นหลังจะดึงจากโฟลเดอร์ /cer/ โดยตรง
  */
 
-const DEFAULT_OBJECTS = [
+export const DEFAULT_OBJECTS = [
   {
     type: "textbox",
     text: "{{NAME}}",
-    left: 398,
-    top: 340,
-    width: 327,
-    fontSize: 26,
-    fontFamily: "Sarabun",
-    fill: "#0D47A1",
-    textAlign: "center",
-    fontWeight: "bold",
+    left: 232,
+    top: 142,
+    width: 558,
+    fontSize: 22,
+    fontFamily: "Prompt",
+    fill: "#C0392B",
+    textAlign: "left",
+    fontWeight: "normal",
   },
   {
     type: "textbox",
     text: "{{CERT_NO}}",
-    left: 770,
-    top: 52,
-    width: 250,
-    fontSize: 16,
+    left: 938,
+    top: 62,
+    width: 650,
+    fontSize: 12,
     fontFamily: "Sarabun",
-    fill: "#334155",
+    fill: "#000000",
     textAlign: "left",
-    fontWeight: "bold",
+    fontWeight: "normal",
   },
 ];
 
 /**
- * ดึง config สำหรับกิจกรรม (fallback เท่านั้น)
- * ถ้ามีข้อมูล JSON จาก GAS จะไม่ใช้ไฟล์นี้
+ * ดึง path ภาพพื้นหลังจากชื่อกิจกรรมหรือ prefix
+ */
+export function resolveBackgroundPath(activity = "", prefix = "") {
+  const cleanPrefix = String(prefix || "").trim().toLowerCase();
+  const cleanActivity = String(activity || "").trim().toLowerCase();
+
+  if (cleanPrefix) {
+    return `/cer/${cleanPrefix}.png`;
+  }
+  if (cleanActivity.includes("sci") || cleanActivity.includes("วิทย์")) {
+    return "/cer/sci2569.png";
+  }
+  if (cleanActivity.includes("soc") || cleanActivity.includes("สังคม")) {
+    return "/cer/social69.png";
+  }
+  if (cleanActivity) {
+    return `/cer/${cleanActivity}.png`;
+  }
+  return "/cer/sci2569.png";
+}
+
+/**
+ * ดึง config สำหรับกิจกรรม (fallback เมื่อยังไม่มีใน GAS)
  */
 export function getTemplateConfig(activity = "", prefix = "") {
-  const key = (prefix || activity || "default").trim().toLowerCase();
   return {
-    background: `/cer/${key}.png`,
+    background: resolveBackgroundPath(activity, prefix),
     objects: DEFAULT_OBJECTS,
   };
 }

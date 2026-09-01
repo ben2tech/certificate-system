@@ -60,24 +60,53 @@ export default function Search() {
   }, []);
 
   // === ฟังก์ชันหาข้อมูล Template จากชื่อกิจกรรม ===
-  // ค้นหา template ที่ตรงกับ activity ของเกียรติบัตร
   function findTemplate(c) {
     if (!templates || templates.length === 0) return null;
     const certActivity = String(c?.activity || "").trim().toLowerCase();
     const certTemplate = String(c?.template || "").trim().toLowerCase();
+    const certNo = String(c?.certNo || "").trim().toLowerCase();
 
-    return templates.find((t) => {
-      const act = (t.activity || "").trim().toLowerCase();
-      const pfx = (t.prefix || "").trim().toLowerCase();
-      return act === certActivity || pfx === certTemplate || pfx === certActivity;
-    }) || null;
+    // 1. ตรงกันแบบเป๊ะๆ
+    let found = templates.find((t) => {
+      const act = String(t?.activity || "").trim().toLowerCase();
+      const pfx = String(t?.prefix || "").trim().toLowerCase();
+      return (
+        (act && act === certActivity) ||
+        (pfx && (pfx === certTemplate || pfx === certActivity))
+      );
+    });
+    if (found) return found;
+
+    // 2. ตรงกันแบบ Keyword / Partial match
+    found = templates.find((t) => {
+      const act = String(t?.activity || "").trim().toLowerCase();
+      const pfx = String(t?.prefix || "").trim().toLowerCase();
+      if (pfx && (certActivity.includes(pfx) || pfx.includes(certActivity))) return true;
+      if (act && (certActivity.includes(act) || act.includes(certActivity))) return true;
+      if ((certActivity.includes("วิทย์") || certNo.includes("sci")) && (pfx.includes("sci") || act.includes("วิทย์"))) return true;
+      if ((certActivity.includes("สังคม") || certNo.includes("soc")) && (pfx.includes("soc") || act.includes("สังคม"))) return true;
+      return false;
+    });
+    if (found) return found;
+
+    // 3. ถ้ามี template ที่มี JSON อยู่แล้ว ให้ใช้ตัวแรกที่มี JSON
+    const withJson = templates.find((t) => t.json && t.json.trim() !== "" && t.json.trim() !== "{}");
+    if (withJson) return withJson;
+
+    return templates[0] || null;
   }
 
-  // ภาพพื้นหลัง: ดึงจาก /cer/ ตามชื่องานโดยตรง (ไม่ใช้ Google Drive)
+  // ภาพพื้นหลัง: ดึงจาก /cer/ ตามชื่องานโดยตรง
   function getBackgroundForCert(c) {
     const match = findTemplate(c);
-    const key = match?.prefix || match?.activity || c?.activity || "default";
-    return `/cer/${key.trim().toLowerCase()}.png`;
+    const pfx = match?.prefix ? String(match.prefix).trim().toLowerCase() : "";
+    const act = String(c?.activity || "").trim().toLowerCase();
+    const certNo = String(c?.certNo || "").trim().toLowerCase();
+
+    if (pfx) return `/cer/${pfx}.png`;
+    if (act.includes("sci") || act.includes("วิทย์") || certNo.includes("sci")) return "/cer/sci2569.png";
+    if (act.includes("soc") || act.includes("สังคม") || certNo.includes("soc")) return "/cer/social69.png";
+    return "/cer/sci2569.png";
   }
 
   // พิกัดข้อความ: ดึง JSON จาก GAS (Google Sheets) ที่ครูบันทึกไว้
@@ -89,7 +118,7 @@ export default function Search() {
   // Prefix สำหรับจับคู่กับ config fallback
   function getPrefixForCert(c) {
     const match = findTemplate(c);
-    return match?.prefix ? match.prefix.trim() : String(c?.template || "").trim();
+    return match?.prefix ? String(match.prefix).trim() : String(c?.template || "").trim();
   }
 
   async function handleSearch() {

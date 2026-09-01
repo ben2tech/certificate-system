@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Box, CircularProgress } from "@mui/material";
-import { getTemplateConfig } from "../config/templates";
+import { getTemplateConfig, resolveBackgroundPath } from "../config/templates";
 
 /**
  * สร้างรูปภาพเกียรติบัตร PNG ความละเอียดสูงในหน่วยความจำ (In-Memory Canvas)
@@ -25,24 +25,35 @@ export async function generateCertificatePngDataUrl({
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // 1. วาดภาพพื้นหลัง Template จาก /cer/
-  if (background) {
-    try {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = background;
-      await new Promise((resolve) => {
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  const bgPath = background || "/cer/sci2569.png";
+  try {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = bgPath;
+    await new Promise((resolve) => {
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve();
+      };
+      img.onerror = () => {
+        console.warn("ไม่สามารถโหลดภาพพื้นหลัง:", bgPath);
+        // ลอง fallback ไปยัง /cer/sci2569.png ถ้า path แรกโหลดไม่ได้
+        if (bgPath !== "/cer/sci2569.png") {
+          const fallbackImg = new Image();
+          fallbackImg.crossOrigin = "anonymous";
+          fallbackImg.src = "/cer/sci2569.png";
+          fallbackImg.onload = () => {
+            ctx.drawImage(fallbackImg, 0, 0, canvas.width, canvas.height);
+            resolve();
+          };
+          fallbackImg.onerror = () => resolve();
+        } else {
           resolve();
-        };
-        img.onerror = () => {
-          console.warn("ไม่พบภาพพื้นหลัง:", background);
-          resolve();
-        };
-      });
-    } catch (e) {
-      console.warn("Background load warning:", e);
-    }
+        }
+      };
+    });
+  } catch (e) {
+    console.warn("Background load warning:", e);
   }
 
   // รอโหลด Font
@@ -66,7 +77,7 @@ export async function generateCertificatePngDataUrl({
         .replace(/\{\{YEAR\}\}/g, String(year || ""));
 
       const fontSize = Math.round((obj.fontSize || 34) * scale);
-      const fontWeight = obj.fontWeight || 700;
+      const fontWeight = obj.fontWeight || "normal";
       const fontFamily = obj.fontFamily || "Prompt";
       const fill = typeof obj.fill === "string" ? obj.fill : "#0F172A";
       const textAlign = obj.textAlign || "left";
@@ -113,25 +124,7 @@ export async function generateCertificatePngDataUrl({
 }
 
 /**
- * สร้าง path ภาพพื้นหลังจากชื่อกิจกรรม
- * เช่น "สัปดาห์วิทยาศาสตร์" + prefix "SCI2569" → "/cer/sci2569.png"
- * เช่น activity "sci2569" → "/cer/sci2569.png"
- */
-function buildBackgroundPath(activity = "", prefix = "") {
-  // ใช้ prefix ก่อน (เพราะมักเป็นชื่อสั้นๆ เช่น sci2569)
-  const key = (prefix || activity || "default").trim().toLowerCase();
-  return `/cer/${key}.png`;
-}
-
-/**
  * CertificatePreview — สร้างภาพ PNG ใน Memory แล้วแสดงผลเป็น <img>
- *
- * ลำดับการอ่านพิกัด:
- *   1. templateJson (จาก GAS API) ← แหล่งหลัก ทุกอุปกรณ์เห็นตรงกัน
- *   2. templates.js fallback ← ใช้เมื่อ GAS ยังไม่มีข้อมูล
- *
- * ภาพพื้นหลัง:
- *   ดึงจาก /cer/ชื่องาน.png เท่านั้น (ไม่ใช้ Google Drive)
  */
 export default function CertificatePreview({
   id = undefined,
@@ -152,7 +145,6 @@ export default function CertificatePreview({
     let customVars = null;
 
     // === ลำดับที่ 1: พิกัดจาก GAS (templateJson) ===
-    // ข้อมูลนี้มาจาก Google Sheets ดังนั้นทุกอุปกรณ์จะเห็นเหมือนกัน
     try {
       if (templateJson) {
         const parsed = typeof templateJson === "string" ? JSON.parse(templateJson) : templateJson;
@@ -169,16 +161,16 @@ export default function CertificatePreview({
       console.log("Template JSON parse notice:", e);
     }
 
-    // === ลำดับที่ 2: Fallback จาก templates.js (เมื่อ GAS ยังไม่มีข้อมูล) ===
+    // === ลำดับที่ 2: Fallback จาก templates.js ===
     if (!customVars) {
       const fallback = getTemplateConfig(activity, prefix);
       customVars = fallback.objects;
     }
 
-    // === ภาพพื้นหลัง: จาก /cer/ เท่านั้น ===
+    // === ภาพพื้นหลัง: จาก /cer/ เสมอ ===
     let bg = background;
     if (!bg || bg.includes("googleusercontent.com") || bg.includes("drive.google.com")) {
-      bg = buildBackgroundPath(activity, prefix);
+      bg = resolveBackgroundPath(activity, prefix);
     }
 
     return { configVars: customVars, finalBackground: bg };
