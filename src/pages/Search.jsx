@@ -108,8 +108,11 @@ export default function Search() {
         <Box textAlign="center" mb={4}>
           <Box
             component="img"
-            src="/logo.png"
+            src="./logo.png"
             alt="School Logo"
+            onError={(e) => {
+              e.currentTarget.src = "logo.png";
+            }}
             sx={{
               width: { xs: 90, sm: 110 },
               height: { xs: 90, sm: 110 },
