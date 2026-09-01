@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -21,7 +21,7 @@ import {
   ErrorOutline,
 } from "@mui/icons-material";
 
-import { searchStudent } from "../services/api";
+import { searchStudent, getFromGAS } from "../services/api";
 import CertificateCanvas from "../components/CertificateCanvas";
 
 export default function Search() {
@@ -29,6 +29,43 @@ export default function Search() {
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [result, setResult] = useState(null);
+  const [templates, setTemplates] = useState([]);
+
+  // โหลด Templates ล่าสุดจาก Google Apps Script
+  useEffect(() => {
+    getFromGAS({ action: "templates" })
+      .then((res) => {
+        if (res && res.data) setTemplates(res.data);
+      })
+      .catch((e) => console.warn("Template fetch notice:", e));
+  }, []);
+
+  function findMatchingTemplate(c) {
+    if (!templates || templates.length === 0) return null;
+    const certAct = String(c?.activity || "").trim().toLowerCase();
+    const certNo = String(c?.certNo || "").trim().toLowerCase();
+
+    // 1. Exact match
+    let m = templates.find((t) => {
+      const act = String(t?.activity || "").trim().toLowerCase();
+      const pfx = String(t?.prefix || "").trim().toLowerCase();
+      return (act && act === certAct) || (pfx && (pfx === certAct || certNo.includes(pfx)));
+    });
+    if (m) return m;
+
+    // 2. Keyword match
+    m = templates.find((t) => {
+      const act = String(t?.activity || "").trim().toLowerCase();
+      const pfx = String(t?.prefix || "").trim().toLowerCase();
+      if ((certAct.includes("วิทย์") || certNo.includes("sci")) && (pfx.includes("sci") || act.includes("วิทย์"))) return true;
+      if ((certAct.includes("สังคม") || certNo.includes("soc")) && (pfx.includes("soc") || act.includes("สังคม"))) return true;
+      return false;
+    });
+    if (m) return m;
+
+    // 3. ตัวแรกที่มี json
+    return templates.find((t) => t.json && t.json.trim() !== "" && t.json.trim() !== "{}") || templates[0] || null;
+  }
 
   async function handleSearch() {
     if (!studentId.trim()) {
@@ -38,7 +75,11 @@ export default function Search() {
 
     setLoading(true);
     try {
-      const res = await searchStudent(studentId.trim());
+      const [res, tplRes] = await Promise.all([
+        searchStudent(studentId.trim()),
+        getFromGAS({ action: "templates" }).catch(() => null),
+      ]);
+      if (tplRes && tplRes.data) setTemplates(tplRes.data);
       setResult(res.data || {});
     } catch {
       alert("ค้นหาไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
@@ -156,53 +197,60 @@ export default function Search() {
             <Box mt={4}>
               {certList.length > 0 ? (
                 <Stack spacing={4}>
-                  {certList.map((c, i) => (
-                    <Box
-                      key={i}
-                      sx={{
-                        borderRadius: 3,
-                        bgcolor: "rgba(255,255,255,0.03)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        p: { xs: 2, sm: 3 },
-                      }}
-                    >
-                      {/* ข้อมูลนักเรียน */}
-                      <Box sx={{ mb: 2.5, p: 2, borderRadius: 2, bgcolor: "rgba(255, 255, 255, 0.05)" }}>
-                        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1}>
-                          <Box>
-                            <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
-                              <EmojiEvents sx={{ color: "#FFD700", fontSize: 22 }} />
-                              <Typography variant="h6" sx={{ color: "#FFD700", fontWeight: 700 }}>
-                                {c.activity}
+                  {certList.map((c, i) => {
+                    const matchTpl = findMatchingTemplate(c);
+                    return (
+                      <Box
+                        key={i}
+                        sx={{
+                          borderRadius: 3,
+                          bgcolor: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          p: { xs: 2, sm: 3 },
+                        }}
+                      >
+                        {/* ข้อมูลนักเรียน */}
+                        <Box sx={{ mb: 2.5, p: 2, borderRadius: 2, bgcolor: "rgba(255, 255, 255, 0.05)" }}>
+                          <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1}>
+                            <Box>
+                              <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
+                                <EmojiEvents sx={{ color: "#FFD700", fontSize: 22 }} />
+                                <Typography variant="h6" sx={{ color: "#FFD700", fontWeight: 700 }}>
+                                  {c.activity}
+                                </Typography>
+                              </Stack>
+                              <Stack direction="row" flexWrap="wrap" gap={1.5}>
+                                <Typography variant="body2" sx={{ color: "#E2E8F0", display: "flex", alignItems: "center", gap: 0.5 }}>
+                                  <Person sx={{ fontSize: 18, color: "#90CAF9" }} /> {c.name}
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: "#CBD5E1", display: "flex", alignItems: "center", gap: 0.5 }}>
+                                  <School sx={{ fontSize: 18, color: "#A7F3D0" }} /> {c.school}
+                                </Typography>
+                              </Stack>
+                            </Box>
+                            {c.certNo && (
+                              <Typography variant="body2" sx={{ color: "#FFD700", fontWeight: 700 }}>
+                                เลขที่: {c.certNo}
                               </Typography>
-                            </Stack>
-                            <Stack direction="row" flexWrap="wrap" gap={1.5}>
-                              <Typography variant="body2" sx={{ color: "#E2E8F0", display: "flex", alignItems: "center", gap: 0.5 }}>
-                                <Person sx={{ fontSize: 18, color: "#90CAF9" }} /> {c.name}
-                              </Typography>
-                              <Typography variant="body2" sx={{ color: "#CBD5E1", display: "flex", alignItems: "center", gap: 0.5 }}>
-                                <School sx={{ fontSize: 18, color: "#A7F3D0" }} /> {c.school}
-                              </Typography>
-                            </Stack>
-                          </Box>
-                          {c.certNo && (
-                            <Typography variant="body2" sx={{ color: "#FFD700", fontWeight: 700 }}>
-                              เลขที่: {c.certNo}
-                            </Typography>
-                          )}
-                        </Stack>
-                      </Box>
+                            )}
+                          </Stack>
+                        </Box>
 
-                      {/* เกียรติบัตร */}
-                      <Box sx={{ maxWidth: 640, mx: "auto" }}>
-                        <CertificateCanvas
-                          name={c.name}
-                          certNo={c.certNo}
-                          activity={c.activity}
-                        />
+                        {/* เกียรติบัตร */}
+                        <Box sx={{ maxWidth: 640, mx: "auto" }}>
+                          <CertificateCanvas
+                            name={c.name}
+                            school={c.school}
+                            activity={c.activity}
+                            year={c.year}
+                            certNo={c.certNo}
+                            prefix={matchTpl?.prefix || "sci2569"}
+                            templateJson={matchTpl?.json || null}
+                          />
+                        </Box>
                       </Box>
-                    </Box>
-                  ))}
+                    );
+                  })}
                 </Stack>
               ) : (
                 <Paper sx={{ p: 4, textAlign: "center", borderRadius: 3, bgcolor: "rgba(255, 255, 255, 0.95)", maxWidth: 620, mx: "auto" }}>

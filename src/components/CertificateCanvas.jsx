@@ -1,38 +1,55 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Box, CircularProgress, Button, Stack } from "@mui/material";
 import { Image as ImageIcon, PictureAsPdf } from "@mui/icons-material";
 import { jsPDF } from "jspdf";
-import { getTemplate } from "../config/templates";
+import { getBackgroundUrl, DEFAULT_COORDINATES } from "../config/templates";
 
 /**
  * ฟังก์ชันสร้าง DataURL ของเกียรติบัตรบน Canvas
  */
-export async function generateCertificateUrl({ name = "", certNo = "", activity = "" }) {
+export async function generateCertificateUrl({
+  name = "",
+  school = "",
+  activity = "",
+  year = "",
+  certNo = "",
+  prefix = "",
+  templateJson = null,
+}) {
   const canvas = document.createElement("canvas");
   canvas.width = 1600;
   canvas.height = 1131; // A4 แนวนอน
   const ctx = canvas.getContext("2d");
 
-  // พื้นหลังสีขาว
+  // 1. พื้นหลังสีขาว
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const tpl = getTemplate(activity);
-
-  // 1. วาดภาพพื้นหลัง
+  // 2. โหลดและวาดภาพพื้นหลัง
+  const bgUrl = getBackgroundUrl(activity, prefix);
   try {
     const img = new Image();
     img.crossOrigin = "anonymous";
-    img.src = tpl.background;
+    img.src = bgUrl;
     await new Promise((resolve) => {
       img.onload = () => {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         resolve();
       };
-      img.onerror = () => resolve();
+      img.onerror = () => {
+        // Fallback to /cer/sci2569.png
+        const fallback = new Image();
+        fallback.crossOrigin = "anonymous";
+        fallback.src = getBackgroundUrl("sci2569");
+        fallback.onload = () => {
+          ctx.drawImage(fallback, 0, 0, canvas.width, canvas.height);
+          resolve();
+        };
+        fallback.onerror = () => resolve();
+      };
     });
   } catch (e) {
-    console.warn("BG Load:", e);
+    console.warn("BG Load error:", e);
   }
 
   // รอ Fonts พร้อม
@@ -40,34 +57,87 @@ export async function generateCertificateUrl({ name = "", certNo = "", activity 
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
   } catch (e) {}
 
-  const scale = 1600 / 1123;
+  const scale = 1600 / 1123; // สเกล 1123px (Designer) -> 1600px
 
-  // 2. วาดชื่อนักเรียน
-  if (name) {
-    const n = tpl.name;
-    const fSize = Math.round(n.fontSize * scale);
-    ctx.font = `normal ${fSize}px '${n.font}', sans-serif`;
-    ctx.fillStyle = n.color;
-    ctx.textAlign = n.align;
-    ctx.textBaseline = "alphabetic";
-    ctx.fillText(name, n.left * scale, n.top * scale + fSize * 0.85);
+  // 3. แยกดึง Objects ที่จัดวางไว้
+  let objects = null;
+  if (templateJson) {
+    try {
+      const parsed = typeof templateJson === "string" ? JSON.parse(templateJson) : templateJson;
+      if (parsed && Array.isArray(parsed.objects) && parsed.objects.length > 0) {
+        objects = parsed.objects;
+      }
+    } catch (e) {
+      console.warn("JSON parse error:", e);
+    }
   }
 
-  // 3. วาดเลขที่เกียรติบัตร
-  if (certNo) {
-    const c = tpl.certNo;
-    const fSize = Math.round(c.fontSize * scale);
-    ctx.font = `normal ${fSize}px '${c.font}', sans-serif`;
-    ctx.fillStyle = c.color;
-    ctx.textAlign = c.align;
-    ctx.textBaseline = "alphabetic";
-    ctx.fillText(certNo, c.left * scale, c.top * scale + fSize * 0.85);
+  // ถ้ายังไม่มีจาก props ลองดึงจาก localStorage
+  if (!objects) {
+    const local =
+      localStorage.getItem(`template_${prefix}`) ||
+      localStorage.getItem(`template_${activity}`) ||
+      localStorage.getItem("template_sci2569");
+    if (local) {
+      try {
+        const parsed = JSON.parse(local);
+        if (parsed && Array.isArray(parsed.objects)) objects = parsed.objects;
+      } catch (e) {}
+    }
   }
+
+  const objectsToDraw = objects || DEFAULT_COORDINATES;
+
+  // 4. วาดตัวแปรข้อความทุกตัวตามพิกัดที่เซฟไว้
+  objectsToDraw.forEach((obj) => {
+    let text = obj.text || "";
+    text = text
+      .replace(/\{\{NAME\}\}/g, name || "")
+      .replace(/\{\{CERT_NO\}\}/g, certNo || "")
+      .replace(/\{\{SCHOOL\}\}/g, school || "เบญจมราชรังสฤษฎิ์ ๒")
+      .replace(/\{\{ACTIVITY\}\}/g, activity || "")
+      .replace(/\{\{YEAR\}\}/g, String(year || "2569"));
+
+    const fontSize = Math.round((obj.fontSize || 22) * scale);
+    const fontFamily = obj.fontFamily || "Prompt";
+    const fill = typeof obj.fill === "string" ? obj.fill : "#C0392B";
+    const textAlign = obj.textAlign || "left";
+    const fontWeight = obj.fontWeight || "normal";
+
+    let x = (obj.left || 0) * scale;
+    if (textAlign === "center") {
+      if (obj.width && obj.width > 20) {
+        x = ((obj.left || 0) + obj.width / 2) * scale;
+      } else {
+        x = canvas.width / 2;
+      }
+    } else if (textAlign === "right") {
+      if (obj.width && obj.width > 20) {
+        x = ((obj.left || 0) + obj.width) * scale;
+      }
+    }
+
+    const y = (obj.top || 0) * scale + fontSize * 0.85;
+
+    ctx.font = `${fontWeight} ${fontSize}px '${fontFamily}', 'Sarabun', 'Prompt', sans-serif`;
+    ctx.fillStyle = fill;
+    ctx.textAlign = textAlign;
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText(text, x, y);
+  });
 
   return canvas.toDataURL("image/png", 1.0);
 }
 
-export default function CertificateCanvas({ name = "", certNo = "", activity = "" }) {
+export default function CertificateCanvas({
+  name = "",
+  school = "",
+  activity = "",
+  year = "",
+  certNo = "",
+  prefix = "",
+  templateJson = null,
+}) {
   const [url, setUrl] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -75,7 +145,15 @@ export default function CertificateCanvas({ name = "", certNo = "", activity = "
     let active = true;
     setLoading(true);
 
-    generateCertificateUrl({ name, certNo, activity }).then((res) => {
+    generateCertificateUrl({
+      name,
+      school,
+      activity,
+      year,
+      certNo,
+      prefix,
+      templateJson,
+    }).then((res) => {
       if (active) {
         setUrl(res);
         setLoading(false);
@@ -85,7 +163,7 @@ export default function CertificateCanvas({ name = "", certNo = "", activity = "
     return () => {
       active = false;
     };
-  }, [name, certNo, activity]);
+  }, [name, school, activity, year, certNo, prefix, templateJson]);
 
   const fileName = `เกียรติบัตร_${name || "นักเรียน"}_${activity || "กิจกรรม"}`;
 
