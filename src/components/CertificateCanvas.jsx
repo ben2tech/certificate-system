@@ -194,18 +194,19 @@ export default function CertificateCanvas({
   }
 
   function downloadPdf() {
-    const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [1600, 1131] });
-    pdf.addImage(url, "PNG", 0, 0, 1600, 1131);
+    // บังคับขนาดมาตรฐานกระดาษ A4 แนวนอน 297mm x 210mm เต็มแผ่น
+    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    pdf.addImage(url, "PNG", 0, 0, 297, 210);
     pdf.save(`${fileName}.pdf`);
   }
 
   return (
     <Box sx={{ width: "100%" }}>
-      {/* ภาพพรีวิว */}
+      {/* ภาพพรีวิวสัดส่วนกระดาษ A4 (297 : 210) */}
       <Box
         sx={{
           width: "100%",
-          aspectRatio: "1123 / 794",
+          aspectRatio: "297 / 210",
           borderRadius: 3,
           overflow: "hidden",
           boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
