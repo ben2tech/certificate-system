@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="./logo.png" />
@@ -8,7 +8,15 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <title>ระบบค้นหาเกียรติบัตรออนไลน์</title>
-    <script type="module" crossorigin src="./assets/index-Dzf_XY-X.js"></script>
+
+    <!-- Preload Fonts สำหรับ Mobile & Desktop ให้แสดงผลเหมือนกัน 100% -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script type="module" crossorigin src="./assets/index-BmVMiraH.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/mui-Dfra68MV.js">
     <link rel="modulepreload" crossorigin href="./assets/fabric-DAzz1oOz.js">
     <link rel="stylesheet" crossorigin href="./assets/index-CXEMsNNu.css">
@@ -16,14 +24,13 @@
   <body>
     <div id="root"></div>
     <script>
-      // ล้าง Service Worker เก่าทั้งหมด เพื่อแก้ปัญหามือถือแคชหน้าเก่าค้าง
+      // ล้าง Service Worker เก่า
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
           registrations.forEach(function(registration) {
             registration.unregister();
           });
         });
-        // ล้าง Cache Storage ทั้งหมด
         if (caches) {
           caches.keys().then(function(names) {
             names.forEach(function(name) {
