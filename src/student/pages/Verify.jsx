@@ -8,7 +8,7 @@ import {
   Stack
 } from "@mui/material";
 
-import { verifyCertificate } from "../services/studentApi";
+import { verifyCertificate } from "../../services/api";
 
 export default function Verify() {
 

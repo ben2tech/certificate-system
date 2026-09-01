@@ -26,8 +26,7 @@ import DataGridTable from "../components/DataGridTable";
 
 import {
   getDashboard,
-  generateAll
-} from "../services/adminApi";
+} from "../../services/api";
 
 export default function Dashboard() {
 

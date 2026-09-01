@@ -1,9 +1,9 @@
 /**
- * การตั้งค่า Template และพิกัดเริ่มต้นสำหรับเกียรติบัตร
- * ภาพพื้นหลังจะดึงจากโฟลเดอร์ /cer/ โดยตรง
+ * src/config/templates.js
+ * จัดการแมปปิ้งภาพพื้นหลังใน /cer/ และพิกัดสำรอง
  */
 
-export const DEFAULT_OBJECTS = [
+export const DEFAULT_COORDINATES = [
   {
     type: "textbox",
     text: "{{NAME}}",
@@ -32,32 +32,25 @@ export const DEFAULT_OBJECTS = [
 
 /**
  * ดึง path ภาพพื้นหลังจากชื่อกิจกรรมหรือ prefix
+ * ไฟล์ทั้งหมดอยู่ใน public/cer/
  */
-export function resolveBackgroundPath(activity = "", prefix = "") {
-  const cleanPrefix = String(prefix || "").trim().toLowerCase();
-  const cleanActivity = String(activity || "").trim().toLowerCase();
+export function getBackgroundUrl(activity = "", prefix = "") {
+  const p = String(prefix || "").trim().toLowerCase();
+  const a = String(activity || "").trim().toLowerCase();
 
-  if (cleanPrefix) {
-    return `/cer/${cleanPrefix}.png`;
-  }
-  if (cleanActivity.includes("sci") || cleanActivity.includes("วิทย์")) {
-    return "/cer/sci2569.png";
-  }
-  if (cleanActivity.includes("soc") || cleanActivity.includes("สังคม")) {
-    return "/cer/social69.png";
-  }
-  if (cleanActivity) {
-    return `/cer/${cleanActivity}.png`;
-  }
+  if (p) return `/cer/${p}.png`;
+  if (a.includes("sci") || a.includes("วิทย์")) return "/cer/sci2569.png";
+  if (a.includes("soc") || a.includes("สังคม")) return "/cer/social69.png";
+  if (a) return `/cer/${a}.png`;
   return "/cer/sci2569.png";
 }
 
 /**
- * ดึง config สำหรับกิจกรรม (fallback เมื่อยังไม่มีใน GAS)
+ * Fallback config เมื่อยังไม่มีการเซฟพิกัดจาก Designer
  */
-export function getTemplateConfig(activity = "", prefix = "") {
+export function getFallbackTemplate(activity = "", prefix = "") {
   return {
-    background: resolveBackgroundPath(activity, prefix),
-    objects: DEFAULT_OBJECTS,
+    background: getBackgroundUrl(activity, prefix),
+    objects: DEFAULT_COORDINATES,
   };
 }
