@@ -90,13 +90,10 @@ export default function TemplateManager() {
     setSaving(false);
   }
 
-  function getThumbnailUrl(templateId) {
-    if (!templateId) return "";
-    const id = templateId.trim();
-    if (id.startsWith("http://") || id.startsWith("https://") || id.startsWith("/")) {
-      return id;
-    }
-    return `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+  // สร้าง path thumbnail จากชื่อกิจกรรม (ดึงจาก /cer/ ไม่ใช้ Google Drive)
+  function getThumbnailUrl(item) {
+    const key = (item?.activity || "default").trim().toLowerCase();
+    return `/cer/${key}.png`;
   }
 
   return (

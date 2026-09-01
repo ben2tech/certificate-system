@@ -59,43 +59,34 @@ export default function Search() {
       .catch((err) => console.log("Load templates notice:", err));
   }, []);
 
-  const DEFAULT_BACKGROUND = "https://lh3.googleusercontent.com/d/1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA=w1600";
-
+  // === ฟังก์ชันหาข้อมูล Template จากชื่อกิจกรรม ===
+  // ค้นหา template ที่ตรงกับ activity ของเกียรติบัตร
   function findTemplate(c) {
     if (!templates || templates.length === 0) return null;
-    const certTemplate = String(c?.template || "").trim().toLowerCase();
     const certActivity = String(c?.activity || "").trim().toLowerCase();
+    const certTemplate = String(c?.template || "").trim().toLowerCase();
 
-    // รวบรวม Templates ทั้งหมดที่ตรงกับกิจกรรมหรือ Template นี้
-    const candidates = templates.filter((t) => {
+    return templates.find((t) => {
       const act = (t.activity || "").trim().toLowerCase();
       const pfx = (t.prefix || "").trim().toLowerCase();
-      if (certTemplate && (pfx === certTemplate || act === certTemplate || certTemplate.includes(pfx) || pfx.includes(certTemplate))) return true;
-      if (certActivity && (act === certActivity || pfx === certActivity || act.includes(certActivity) || certActivity.includes(act))) return true;
-      if (certActivity.includes("วิทย์") && (act.includes("วิทย์") || pfx.includes("sci"))) return true;
-      return false;
-    });
-
-    if (candidates.length > 0) {
-      // ให้ความสำคัญสูงสุดกับ Template ที่มีข้อมูล JSON จาก Template Designer
-      const withJson = candidates.find((t) => t.json && t.json.trim() !== "" && t.json.trim() !== "{}");
-      if (withJson) return withJson;
-      return candidates[0];
-    }
-
-    return null;
+      return act === certActivity || pfx === certTemplate || pfx === certActivity;
+    }) || null;
   }
 
+  // ภาพพื้นหลัง: ดึงจาก /cer/ ตามชื่องานโดยตรง (ไม่ใช้ Google Drive)
   function getBackgroundForCert(c) {
-    // ให้ CertificatePreview โหลดจาก /cer/ พื้นฐานผ่าน getTemplateConfig เอง
-    return null;
+    const match = findTemplate(c);
+    const key = match?.prefix || match?.activity || c?.activity || "default";
+    return `/cer/${key.trim().toLowerCase()}.png`;
   }
 
+  // พิกัดข้อความ: ดึง JSON จาก GAS (Google Sheets) ที่ครูบันทึกไว้
   function getTemplateJsonForCert(c) {
     const match = findTemplate(c);
     return match?.json || null;
   }
 
+  // Prefix สำหรับจับคู่กับ config fallback
   function getPrefixForCert(c) {
     const match = findTemplate(c);
     return match?.prefix ? match.prefix.trim() : String(c?.template || "").trim();

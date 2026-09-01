@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import * as fabric from "fabric";
 import { jsPDF } from "jspdf";
-import { getTemplateConfig } from "../../config/templates";
 
 import {
   Box,
@@ -24,7 +23,6 @@ import {
 } from "@mui/material";
 
 import {
-  Upload,
   Undo,
   Redo,
   Save,
@@ -134,24 +132,23 @@ export default function TemplateDesigner() {
     fabricRef.current = canvas;
 
     drawGrid();
-    // ...
-    // โหลดไฟล์พื้นหลังโดยใช้ config จากโฟลเดอร์ /cer/
-    const config = getTemplateConfig(currentActivity, currentPrefix);
-    const bgUrl = config.background;
-    
-    if (bgUrl) {
-      fabric.FabricImage.fromURL(bgUrl, { crossOrigin: "anonymous" })
-        .then(img => {
-          img.scaleToWidth(1123);
-          img.scaleToHeight(794);
-          canvas.backgroundImage = img;
-          canvas.renderAll();
-          saveHistory();
-        })
-        .catch(err => {
-          console.error("Failed to load background image from local folder:", err);
-        });
-    }
+    saveHistory();
+
+    // โหลดภาพพื้นหลังจากโฟลเดอร์ /cer/ ตามชื่องาน
+    const bgKey = (currentActivity || "default").trim().toLowerCase();
+    const bgUrl = `/cer/${bgKey}.png`;
+
+    fabric.FabricImage.fromURL(bgUrl, { crossOrigin: "anonymous" })
+      .then(img => {
+        img.scaleToWidth(1123);
+        img.scaleToHeight(794);
+        canvas.backgroundImage = img;
+        canvas.renderAll();
+        saveHistory();
+      })
+      .catch(err => {
+        console.warn("ไม่พบภาพพื้นหลัง:", bgUrl, err);
+      });
 
     // Load saved text objects
     const saved = (currentActivity && localStorage.getItem(`template_${currentActivity.trim()}`)) || localStorage.getItem("autosave-template");
@@ -429,34 +426,8 @@ export default function TemplateDesigner() {
   }, []);
 
   /**********************
-   * Background
+   * Background — ดึงจาก /cer/ เท่านั้น (ไม่มีการอัปโหลดแล้ว)
    **********************/
-  function uploadBackground(e) {
-
-    const file = e.target.files[0];
-
-    if (!file) return;
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-
-      fabric.FabricImage.fromURL(reader.result)
-        .then(img => {
-
-          img.scaleToWidth(1123);
-          img.scaleToHeight(794);
-
-          fabricRef.current.backgroundImage = img;
-          fabricRef.current.renderAll();
-
-        });
-
-    };
-
-    reader.readAsDataURL(file);
-
-  }
 
   /**********************
    * Preview

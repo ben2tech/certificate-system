@@ -3,6 +3,7 @@ import { Box, CircularProgress } from "@mui/material";
 
 /**
  * สร้างรูปภาพเกียรติบัตร PNG ความละเอียดสูงในหน่วยความจำ (In-Memory Canvas)
+ * ใช้ background จาก /cer/ เท่านั้น ไม่ดึงจาก Google Drive
  */
 export async function generateCertificatePngDataUrl({
   name = "",
@@ -10,7 +11,7 @@ export async function generateCertificatePngDataUrl({
   activity = "",
   year = "",
   certNo = "",
-  background = "https://lh3.googleusercontent.com/d/1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA=w1600",
+  background = "",
   customVariables = null,
 }) {
   const canvas = document.createElement("canvas");
@@ -22,7 +23,7 @@ export async function generateCertificatePngDataUrl({
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 1. วาดภาพพื้นหลัง Template
+  // 1. วาดภาพพื้นหลัง Template จาก /cer/
   if (background) {
     try {
       const img = new Image();
@@ -33,7 +34,10 @@ export async function generateCertificatePngDataUrl({
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           resolve();
         };
-        img.onerror = () => resolve();
+        img.onerror = () => {
+          console.warn("ไม่พบภาพพื้นหลัง:", background);
+          resolve();
+        };
       });
     } catch (e) {
       console.warn("Background load warning:", e);
@@ -87,8 +91,7 @@ export async function generateCertificatePngDataUrl({
       ctx.fillText(textContent, x, y);
     });
   } else {
-    // ตำแหน่งมาตรฐานที่คำนวณตำแหน่งช่องว่างของใบประกาศเกียรติบัตรอย่างแม่นยำ 100%
-    // 1. เลขที่เกียรติบัตร (อยู่มุมขวาบน ตรงกับแนวคำว่า "เลขที่" ใน Template)
+    // ตำแหน่งมาตรฐาน (fallback เมื่อยังไม่มีพิกัดจาก Designer)
     if (certNo) {
       ctx.font = `600 ${Math.round(15 * scale)}px 'Sarabun', 'Prompt', sans-serif`;
       ctx.fillStyle = "#334155";
@@ -96,8 +99,6 @@ export async function generateCertificatePngDataUrl({
       ctx.textBaseline = "middle";
       ctx.fillText(certNo, canvas.width * 0.772, canvas.height * 0.081);
     }
-
-    // 2. ชื่อผู้ได้รับเกียรติบัตร (กึ่งกลาง ระหว่างคำว่า "ขอมอบเกียรติบัตรฉบับนี้ไว้เพื่อแสดงว่า" และ "ได้เข้าร่วม...")
     if (name) {
       ctx.font = `bold ${Math.round(36 * scale)}px 'Sarabun', 'Prompt', sans-serif`;
       ctx.fillStyle = "#0D47A1";
@@ -110,10 +111,26 @@ export async function generateCertificatePngDataUrl({
   return canvas.toDataURL("image/png", 1.0);
 }
 
-import { getTemplateConfig } from "../config/templates";
+/**
+ * สร้าง path ภาพพื้นหลังจากชื่อกิจกรรม
+ * เช่น "สัปดาห์วิทยาศาสตร์" + prefix "SCI2569" → "/cer/sci2569.png"
+ * เช่น activity "sci2569" → "/cer/sci2569.png"
+ */
+function buildBackgroundPath(activity = "", prefix = "") {
+  // ใช้ prefix ก่อน (เพราะมักเป็นชื่อสั้นๆ เช่น sci2569)
+  const key = (prefix || activity || "default").trim().toLowerCase();
+  return `/cer/${key}.png`;
+}
 
 /**
- * CertificatePreview — สร้างภาพ PNG ใน Memory แล้วแสดงผลเป็น <img> บนหน้าเว็บโดยตรง
+ * CertificatePreview — สร้างภาพ PNG ใน Memory แล้วแสดงผลเป็น <img>
+ *
+ * ลำดับการอ่านพิกัด:
+ *   1. templateJson (จาก GAS API) ← แหล่งหลัก ทุกอุปกรณ์เห็นตรงกัน
+ *   2. templates.js fallback ← ใช้เมื่อ GAS ยังไม่มีข้อมูล
+ *
+ * ภาพพื้นหลัง:
+ *   ดึงจาก /cer/ชื่องาน.png เท่านั้น (ไม่ใช้ Google Drive)
  */
 export default function CertificatePreview({
   id = undefined,
@@ -130,13 +147,12 @@ export default function CertificatePreview({
   const [pngUrl, setPngUrl] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ดึงตำแหน่งตัวแปรจาก Template และไฟล์พื้นหลัง
   const { configVars, finalBackground } = useMemo(() => {
     let customVars = null;
-    let autoBg = background; // from props
 
+    // === ลำดับที่ 1: พิกัดจาก GAS (templateJson) ===
+    // ข้อมูลนี้มาจาก Google Sheets ดังนั้นทุกอุปกรณ์จะเห็นเหมือนกัน
     try {
-      // 1. จาก API Google Apps Script (ถ้าระบบใช้ฐานข้อมูลผ่าน GAS เป็นหลัก)
       if (templateJson) {
         const parsed = typeof templateJson === "string" ? JSON.parse(templateJson) : templateJson;
         if (parsed && Array.isArray(parsed.objects) && parsed.objects.length > 0) {
@@ -148,24 +164,29 @@ export default function CertificatePreview({
           }
         }
       }
-
-      // 2. ถ้าไม่มีใน LocalStorage (เช่น เป็นฝั่งผู้ใช้) ให้ดึงจาก templates.js
-      const config = getTemplateConfig(activity, prefix);
-      if (!customVars) {
-        customVars = config.objects;
-      }
-      
-      // ดึง background จาก config ถ้าไม่ได้ระบุผ่าน prop หรือ prop เป็นค่า Google Drive เริ่มต้น
-      if (!autoBg || autoBg.includes("lh3.googleusercontent.com/d/1cg0Jh7mNZBHq")) {
-         autoBg = config.background;
-      }
-
     } catch (e) {
-      console.log("Template config parse notice:", e);
+      console.log("Template JSON parse notice:", e);
     }
-    
-    return { configVars: customVars, finalBackground: autoBg };
-  }, [activity, prefix, background]);
+
+    // === ลำดับที่ 2: Fallback จาก templates.js (เมื่อ GAS ยังไม่มีข้อมูล) ===
+    if (!customVars) {
+      try {
+        const { getTemplateConfig } = require("../config/templates");
+        const config = getTemplateConfig(activity, prefix);
+        customVars = config.objects;
+      } catch (e) {
+        // ไม่มี fallback ก็ใช้ตำแหน่งมาตรฐาน (hardcoded ใน generateCertificatePngDataUrl)
+      }
+    }
+
+    // === ภาพพื้นหลัง: จาก /cer/ เท่านั้น ===
+    let bg = background;
+    if (!bg || bg.includes("googleusercontent.com") || bg.includes("drive.google.com")) {
+      bg = buildBackgroundPath(activity, prefix);
+    }
+
+    return { configVars: customVars, finalBackground: bg };
+  }, [activity, prefix, background, templateJson]);
 
   // สร้างภาพ PNG ในหน่วยความจำเมื่อข้อมูลเปลี่ยน
   useEffect(() => {
