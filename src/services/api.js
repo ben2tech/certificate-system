@@ -22,6 +22,22 @@ export async function getFromGAS(params = {}) {
 }
 
 /**
+ * ส่งข้อมูล POST ไปยัง Google Apps Script
+ */
+export async function postGAS(data) {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8",
+    },
+    redirect: "follow",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+  return await res.json();
+}
+
+/**
  * ค้นหาข้อมูลเกียรติบัตรนักเรียน
  */
 export async function searchStudent(studentId) {
