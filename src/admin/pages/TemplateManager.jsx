@@ -73,10 +73,6 @@ export default function TemplateManager() {
       alert("กรุณาระบุชื่อกิจกรรม");
       return;
     }
-    if (!editTemplateId.trim()) {
-      alert("กรุณาระบุ Template ID หรือ URL รูปพื้นหลัง");
-      return;
-    }
 
     setSaving(true);
     try {
@@ -193,25 +189,8 @@ export default function TemplateManager() {
                       />
                     </Stack>
 
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      Template ID / Drive ID:
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontFamily: "monospace",
-                        color: "#475569",
-                        wordBreak: "break-all",
-                        display: "block",
-                        bgcolor: "#f8fafc",
-                        p: 1.2,
-                        borderRadius: 1.5,
-                        mt: 0.5,
-                        mb: 2.5,
-                        border: "1px solid #f1f5f9",
-                      }}
-                    >
-                      {item.templateId}
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2.5 }}>
+                      ภาพพื้นหลัง: /cer/{item.activity ? item.activity.toLowerCase() : "default"}.png
                     </Typography>
 
                     <Stack direction="row" spacing={1.5}>
@@ -282,37 +261,15 @@ export default function TemplateManager() {
                 fullWidth
               />
 
-              <TextField
-                label="Template ID หรือ Google Drive File ID / Image URL"
-                placeholder="เช่น 1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA"
-                value={editTemplateId}
-                onChange={(e) => setEditTemplateId(e.target.value)}
-                fullWidth
-                required
-                helperText="ใส่ ID ไฟล์ Google Slides / Google Drive ของพื้นหลัง หรือ URL รูปภาพ"
-              />
-
-              {editTemplateId && (
-                <Box sx={{ mt: 1, p: 1.5, bgcolor: "#f8fafc", borderRadius: 2 }}>
-                  <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                    ตัวอย่างรูปพื้นหลัง:
-                  </Typography>
-                  <Box
-                    component="img"
-                    src={getThumbnailUrl(editTemplateId)}
-                    alt="Preview"
-                    sx={{
-                      width: "100%",
-                      maxHeight: 180,
-                      objectFit: "contain",
-                      borderRadius: 1,
-                    }}
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                    }}
-                  />
-                </Box>
-              )}
+              <Box sx={{ mt: 1, p: 2, bgcolor: "#e0f2fe", borderRadius: 2, border: "1px dashed #38bdf8" }}>
+                <Typography variant="subtitle2" color="#0369a1" fontWeight={700} gutterBottom>
+                  🖼️ การตั้งค่ารูปพื้นหลัง
+                </Typography>
+                <Typography variant="body2" color="#0c4a6e">
+                  ระบบจะค้นหาไฟล์รูปพื้นหลังอัตโนมัติจากโฟลเดอร์ <strong>public/cer/</strong> 
+                  โดยใช้ชื่องานเป็นชื่อไฟล์ เช่น หากตั้งชื่อกิจกรรมว่า <strong>sci2569</strong> ระบบจะดึงภาพจาก <strong>/cer/sci2569.png</strong>
+                </Typography>
+              </Box>
             </Stack>
           </DialogContent>
           <DialogActions sx={{ p: 2.5, pt: 1 }}>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import * as fabric from "fabric";
 import { jsPDF } from "jspdf";
+import { getTemplateConfig } from "../../config/templates";
 
 import {
   Box,
@@ -133,16 +134,12 @@ export default function TemplateDesigner() {
     fabricRef.current = canvas;
 
     drawGrid();
-    saveHistory();
-
-    // If templateId is passed in URL, load its background image directly!
-    const effectiveBgId = currentTemplateId || "1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA";
-    if (effectiveBgId) {
-      const id = effectiveBgId.trim();
-      const bgUrl = (id.startsWith("http://") || id.startsWith("https://") || id.startsWith("/"))
-        ? id
-        : (id.startsWith("designer-") || id.startsWith("test-") ? "https://lh3.googleusercontent.com/d/1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA=w1600" : `https://lh3.googleusercontent.com/d/${id}=w1600`);
-
+    // ...
+    // โหลดไฟล์พื้นหลังโดยใช้ config จากโฟลเดอร์ /cer/
+    const config = getTemplateConfig(currentActivity, currentPrefix);
+    const bgUrl = config.background;
+    
+    if (bgUrl) {
       fabric.FabricImage.fromURL(bgUrl, { crossOrigin: "anonymous" })
         .then(img => {
           img.scaleToWidth(1123);
@@ -152,7 +149,7 @@ export default function TemplateDesigner() {
           saveHistory();
         })
         .catch(err => {
-          console.error("Failed to load background image from template ID:", err);
+          console.error("Failed to load background image from local folder:", err);
         });
     }
 
@@ -614,19 +611,17 @@ export default function TemplateDesigner() {
                 เครื่องมือ
               </Typography>
 
-              <Button
-                variant="outlined"
-                component="label"
-                startIcon={<Upload />}
-              >
-                อัปโหลดพื้นหลัง
-                <input
-                  hidden
-                  type="file"
-                  accept="image/*"
-                  onChange={uploadBackground}
-                />
-              </Button>
+              <Box p={1.5} sx={{ bgcolor: "#f8fafc", borderRadius: 2, border: "1px dashed #cbd5e1" }}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  พื้นหลังปัจจุบัน (โหลดจาก /cer/):
+                </Typography>
+                <Typography variant="subtitle2" fontWeight={700} color="primary">
+                  {currentActivity ? `/cer/${currentActivity}.png` : "ไม่ได้ระบุชื่องาน (ใช้ค่าเริ่มต้น)"}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                  * นำไฟล์รูปไปวางในโฟลเดอร์ public/cer/
+                </Typography>
+              </Box>
 
               <Button
                 variant="contained"

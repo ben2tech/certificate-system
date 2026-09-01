@@ -87,23 +87,8 @@ export default function Search() {
   }
 
   function getBackgroundForCert(c) {
-    const match = findTemplate(c);
-    if (match && match.templateId) {
-      const id = match.templateId.trim();
-      if (id.startsWith("http://") || id.startsWith("https://") || id.startsWith("/")) {
-        return id;
-      }
-      if (!id.startsWith("designer-") && !id.startsWith("test-")) {
-        return `https://lh3.googleusercontent.com/d/${id}=w1600`;
-      }
-    }
-    const driveTemplate = templates.find(
-      (t) => t.templateId && !t.templateId.startsWith("designer-") && !t.templateId.startsWith("test-")
-    );
-    if (driveTemplate) {
-      return `https://lh3.googleusercontent.com/d/${driveTemplate.templateId.trim()}=w1600`;
-    }
-    return DEFAULT_BACKGROUND;
+    // ให้ CertificatePreview โหลดจาก /cer/ พื้นฐานผ่าน getTemplateConfig เอง
+    return null;
   }
 
   function getTemplateJsonForCert(c) {

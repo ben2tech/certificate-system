@@ -110,61 +110,7 @@ export async function generateCertificatePngDataUrl({
   return canvas.toDataURL("image/png", 1.0);
 }
 
-// ค่าพรีเซ็ตพิกัดที่ออกแบบไว้จาก Template Designer (เพื่อให้มือถือ, ไอแพด, และคอมพิวเตอร์ ได้ตำแหน่งเดียวกัน 100%)
-const PRESET_TEMPLATES = {
-  SCI2569: [
-    {
-      type: "textbox",
-      text: "{{NAME}}",
-      left: 398,
-      top: 340,
-      width: 327,
-      fontSize: 26,
-      fontFamily: "Sarabun",
-      fill: "#0D47A1",
-      textAlign: "center",
-      fontWeight: "bold",
-    },
-    {
-      type: "textbox",
-      text: "{{CERT_NO}}",
-      left: 770,
-      top: 52,
-      width: 250,
-      fontSize: 16,
-      fontFamily: "Sarabun",
-      fill: "#334155",
-      textAlign: "left",
-      fontWeight: "bold",
-    },
-  ],
-  DEFAULT: [
-    {
-      type: "textbox",
-      text: "{{NAME}}",
-      left: 398,
-      top: 340,
-      width: 327,
-      fontSize: 26,
-      fontFamily: "Sarabun",
-      fill: "#0D47A1",
-      textAlign: "center",
-      fontWeight: "bold",
-    },
-    {
-      type: "textbox",
-      text: "{{CERT_NO}}",
-      left: 770,
-      top: 52,
-      width: 250,
-      fontSize: 16,
-      fontFamily: "Sarabun",
-      fill: "#334155",
-      textAlign: "left",
-      fontWeight: "bold",
-    },
-  ],
-};
+import { getTemplateConfig } from "../config/templates";
 
 /**
  * CertificatePreview — สร้างภาพ PNG ใน Memory แล้วแสดงผลเป็น <img> บนหน้าเว็บโดยตรง
@@ -177,63 +123,49 @@ export default function CertificatePreview({
   year = "",
   certNo = "",
   prefix = "",
-  background = "https://lh3.googleusercontent.com/d/1cg0Jh7mNZBHq_e8ytmWZRoJN6S7d7CiHJ-ROsxIgTGA=w1600",
+  background = null,
   templateJson = null,
   onPngGenerated = null,
 }) {
   const [pngUrl, setPngUrl] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ดึงตำแหน่งตัวแปรจาก Template
-  const customVariables = useMemo(() => {
+  // ดึงตำแหน่งตัวแปรจาก Template และไฟล์พื้นหลัง
+  const { configVars, finalBackground } = useMemo(() => {
+    let customVars = null;
+    let autoBg = background; // from props
+
     try {
-      // 1. จาก API Google Apps Script
+      // 1. จาก API Google Apps Script (ถ้าระบบใช้ฐานข้อมูลผ่าน GAS เป็นหลัก)
       if (templateJson) {
         const parsed = typeof templateJson === "string" ? JSON.parse(templateJson) : templateJson;
         if (parsed && Array.isArray(parsed.objects) && parsed.objects.length > 0) {
           const vars = parsed.objects.filter(
             (o) => o.text && (o.text.includes("{{") || !o.grid)
           );
-          if (vars.length > 0) return vars;
-        }
-      }
-
-      // 2. จาก LocalStorage ของ Admin
-      const keys = [
-        prefix ? `template_${prefix.trim()}` : null,
-        activity ? `template_${activity.trim()}` : null,
-        "template_SCI2569",
-        "template_sci2569",
-        "template_กิจกรรมวิทย์",
-        "template_สัปดาห์วิทยาศาสตร์",
-        "autosave-template",
-      ].filter(Boolean);
-
-      for (const k of keys) {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-          if (parsed && Array.isArray(parsed.objects) && parsed.objects.length > 0) {
-            const vars = parsed.objects.filter(
-              (o) => o.text && (o.text.includes("{{") || !o.grid)
-            );
-            if (vars.length > 0) return vars;
+          if (vars.length > 0) {
+            customVars = vars;
           }
         }
       }
 
-      // 3. ใช้พรีเซ็ตพิกัดที่ออกแบบไว้จาก Template Designer
-      const normalizedPrefix = (prefix || "").trim().toUpperCase();
-      const normalizedActivity = (activity || "").trim().toLowerCase();
-      if (PRESET_TEMPLATES[normalizedPrefix]) return PRESET_TEMPLATES[normalizedPrefix];
-      if (normalizedActivity.includes("วิทย์") || normalizedPrefix.includes("SCI")) return PRESET_TEMPLATES.SCI2569;
+      // 2. ถ้าไม่มีใน LocalStorage (เช่น เป็นฝั่งผู้ใช้) ให้ดึงจาก templates.js
+      const config = getTemplateConfig(activity, prefix);
+      if (!customVars) {
+        customVars = config.objects;
+      }
+      
+      // ดึง background จาก config ถ้าไม่ได้ระบุผ่าน prop หรือ prop เป็นค่า Google Drive เริ่มต้น
+      if (!autoBg || autoBg.includes("lh3.googleusercontent.com/d/1cg0Jh7mNZBHq")) {
+         autoBg = config.background;
+      }
 
-      return PRESET_TEMPLATES.DEFAULT;
     } catch (e) {
       console.log("Template config parse notice:", e);
     }
-    return PRESET_TEMPLATES.DEFAULT;
-  }, [activity, prefix, templateJson]);
+    
+    return { configVars: customVars, finalBackground: autoBg };
+  }, [activity, prefix, background]);
 
   // สร้างภาพ PNG ในหน่วยความจำเมื่อข้อมูลเปลี่ยน
   useEffect(() => {
@@ -246,8 +178,8 @@ export default function CertificatePreview({
       activity,
       year,
       certNo: String(certNo || "").trim(),
-      background,
-      customVariables,
+      background: finalBackground,
+      customVariables: configVars,
     })
       .then((url) => {
         if (active) {
@@ -264,7 +196,7 @@ export default function CertificatePreview({
     return () => {
       active = false;
     };
-  }, [name, school, activity, year, certNo, background, customVariables]);
+  }, [name, school, activity, year, certNo, finalBackground, configVars]);
 
   return (
     <Box
