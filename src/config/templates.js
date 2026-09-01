@@ -7,24 +7,26 @@ export const DEFAULT_COORDINATES = [
   {
     type: "textbox",
     text: "{{NAME}}",
-    left: 232,
-    top: 142,
-    fontSize: 22,
+    left: 336,
+    top: 415,
+    fontSize: 28,
     fontFamily: "Prompt",
-    fill: "#C0392B",
-    textAlign: "left",
-    fontWeight: "normal",
+    fill: "#0D47A1",
+    textAlign: "center",
+    fontWeight: "bold",
+    width: 450,
   },
   {
     type: "textbox",
     text: "{{CERT_NO}}",
-    left: 938,
+    left: 850,
     top: 62,
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: "Sarabun",
     fill: "#000000",
     textAlign: "left",
     fontWeight: "normal",
+    width: 200,
   },
 ];
 
@@ -40,12 +42,4 @@ export function getBackgroundUrl(activity = "", prefix = "") {
   if (a.includes("soc") || a.includes("สังคม")) return `${normalizedBase}cer/social69.png`;
   if (a) return `${normalizedBase}cer/${a}.png`;
   return `${normalizedBase}cer/sci2569.png`;
-}
-
-export function getTemplate(activity = "") {
-  return {
-    background: getBackgroundUrl(activity),
-    name: { left: 232, top: 142, fontSize: 22, color: "#C0392B", font: "Prompt", align: "left" },
-    certNo: { left: 938, top: 62, fontSize: 12, color: "#000000", font: "Sarabun", align: "left" },
-  };
 }
