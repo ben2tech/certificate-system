@@ -95,7 +95,7 @@ export async function generateCertificateUrl({
 
   const objectsToDraw = objects && objects.length > 0 ? objects : DEFAULT_COORDINATES;
 
-  // 5. วาดตัวแปรข้อความทุกตัวตามพิกัดที่เซฟไว้
+  // 5. วาดตัวแปรข้อความทุกตัวตามพิกัด 1:1 กับ Fabric.js
   objectsToDraw.forEach((obj) => {
     let rawText = obj.text || "";
 
@@ -133,13 +133,13 @@ export async function generateCertificateUrl({
       }
     }
 
-    // ใช้ textBaseline = "middle" เพื่อให้ตรงกันทุกเบราว์เซอร์และระบบปฏิบัติการ
-    const y = ((obj.top || 0) + (obj.fontSize || 26) * 0.6) * scale;
+    // ใช้ textBaseline = "top" เพื่อให้ตรงกับ Fabric.js 1:1 ไม่มีเพี้ยน
+    const y = (obj.top || 0) * scale;
 
     ctx.font = `${fontWeight} ${fontSize}px '${fontFamily}', 'Prompt', 'Sarabun', sans-serif`;
     ctx.fillStyle = fill;
     ctx.textAlign = textAlign;
-    ctx.textBaseline = "middle";
+    ctx.textBaseline = "top";
     ctx.fillText(text, x, y);
   });
 

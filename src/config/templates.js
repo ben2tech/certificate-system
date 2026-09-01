@@ -8,7 +8,7 @@ export const DEFAULT_COORDINATES = [
     type: "textbox",
     text: "{{NAME}}",
     left: 336,
-    top: 330,
+    top: 370,
     fontSize: 26,
     fontFamily: "Prompt",
     fill: "#0D47A1",
