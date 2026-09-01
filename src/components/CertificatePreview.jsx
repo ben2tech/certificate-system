@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Box, CircularProgress } from "@mui/material";
+import { getTemplateConfig } from "../config/templates";
 
 /**
  * สร้างรูปภาพเกียรติบัตร PNG ความละเอียดสูงในหน่วยความจำ (In-Memory Canvas)
@@ -170,13 +171,8 @@ export default function CertificatePreview({
 
     // === ลำดับที่ 2: Fallback จาก templates.js (เมื่อ GAS ยังไม่มีข้อมูล) ===
     if (!customVars) {
-      try {
-        const { getTemplateConfig } = require("../config/templates");
-        const config = getTemplateConfig(activity, prefix);
-        customVars = config.objects;
-      } catch (e) {
-        // ไม่มี fallback ก็ใช้ตำแหน่งมาตรฐาน (hardcoded ใน generateCertificatePngDataUrl)
-      }
+      const fallback = getTemplateConfig(activity, prefix);
+      customVars = fallback.objects;
     }
 
     // === ภาพพื้นหลัง: จาก /cer/ เท่านั้น ===
