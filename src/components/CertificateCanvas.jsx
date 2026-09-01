@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Box, CircularProgress, Button, Stack } from "@mui/material";
 import { Image as ImageIcon, PictureAsPdf } from "@mui/icons-material";
 import { jsPDF } from "jspdf";
@@ -6,6 +6,7 @@ import { getBackgroundUrl, DEFAULT_COORDINATES } from "../config/templates";
 
 /**
  * ฟังก์ชันสร้าง DataURL ของเกียรติบัตรบน HTML5 Canvas
+ * ความละเอียด 1600x1131 px มาตรฐาน A4 แนวนอน
  */
 export async function generateCertificateUrl({
   name = "",
@@ -18,7 +19,7 @@ export async function generateCertificateUrl({
 }) {
   const canvas = document.createElement("canvas");
   canvas.width = 1600;
-  canvas.height = 1131; // A4 แนวนอน
+  canvas.height = 1131;
   const ctx = canvas.getContext("2d");
 
   // 1. พื้นหลังสีขาว
@@ -51,12 +52,13 @@ export async function generateCertificateUrl({
     console.warn("BG Load notice:", e);
   }
 
-  // 3. รอ Fonts พร้อม (จำกัดเวลา 500ms ป้องกันค้าง)
+  // 3. โหลดฟอนต์ Prompt และ Sarabun ให้พร้อมก่อนวาดเสมอ
   try {
-    if (document.fonts && document.fonts.ready) {
-      await Promise.race([
+    if (document.fonts) {
+      await Promise.allSettled([
+        document.fonts.load("bold 40px 'Prompt'"),
+        document.fonts.load("normal 20px 'Sarabun'"),
         document.fonts.ready,
-        new Promise((r) => setTimeout(r, 500)),
       ]);
     }
   } catch (e) {}
@@ -105,7 +107,6 @@ export async function generateCertificateUrl({
       .replace(/\{\{ACTIVITY\}\}/g, activity || "")
       .replace(/\{\{YEAR\}\}/g, String(year || "2569"));
 
-    // Fallback ถ้าไม่มี {{}} แต่เป็นชื่อตัวแปรเดี่ยวๆ
     if (text === rawText) {
       if (rawText.toUpperCase().includes("NAME")) text = name || "";
       if (rawText.toUpperCase().includes("CERT")) text = certNo || "";
@@ -132,12 +133,13 @@ export async function generateCertificateUrl({
       }
     }
 
-    const y = (obj.top || 0) * scale + fontSize * 0.85;
+    // ใช้ textBaseline = "middle" เพื่อให้ตรงกันทุกเบราว์เซอร์และระบบปฏิบัติการ
+    const y = ((obj.top || 0) + (obj.fontSize || 26) * 0.6) * scale;
 
     ctx.font = `${fontWeight} ${fontSize}px '${fontFamily}', 'Prompt', 'Sarabun', sans-serif`;
     ctx.fillStyle = fill;
     ctx.textAlign = textAlign;
-    ctx.textBaseline = "alphabetic";
+    ctx.textBaseline = "middle";
     ctx.fillText(text, x, y);
   });
 
