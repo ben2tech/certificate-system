@@ -5,7 +5,7 @@ import { jsPDF } from "jspdf";
 import { getBackgroundUrl, DEFAULT_COORDINATES } from "../config/templates";
 
 /**
- * ฟังก์ชันสร้าง DataURL ของเกียรติบัตรบน Canvas
+ * ฟังก์ชันสร้าง DataURL ของเกียรติบัตรบน HTML5 Canvas
  */
 export async function generateCertificateUrl({
   name = "",
@@ -37,7 +37,6 @@ export async function generateCertificateUrl({
         resolve();
       };
       img.onerror = () => {
-        // Fallback to /cer/sci2569.png
         const fallback = new Image();
         fallback.crossOrigin = "anonymous";
         fallback.src = getBackgroundUrl("sci2569");
@@ -49,17 +48,22 @@ export async function generateCertificateUrl({
       };
     });
   } catch (e) {
-    console.warn("BG Load error:", e);
+    console.warn("BG Load notice:", e);
   }
 
-  // รอ Fonts พร้อม
+  // 3. รอ Fonts พร้อม (จำกัดเวลา 500ms ป้องกันค้าง)
   try {
-    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    if (document.fonts && document.fonts.ready) {
+      await Promise.race([
+        document.fonts.ready,
+        new Promise((r) => setTimeout(r, 500)),
+      ]);
+    }
   } catch (e) {}
 
   const scale = 1600 / 1123; // สเกล 1123px (Designer) -> 1600px
 
-  // 3. แยกดึง Objects ที่จัดวางไว้
+  // 4. แยกดึง Objects ที่จัดวางไว้
   let objects = null;
   if (templateJson) {
     try {
@@ -68,11 +72,10 @@ export async function generateCertificateUrl({
         objects = parsed.objects;
       }
     } catch (e) {
-      console.warn("JSON parse error:", e);
+      console.warn("JSON parse notice:", e);
     }
   }
 
-  // ถ้ายังไม่มีจาก props ลองดึงจาก localStorage
   if (!objects) {
     const local =
       localStorage.getItem(`template_${prefix}`) ||
@@ -81,26 +84,38 @@ export async function generateCertificateUrl({
     if (local) {
       try {
         const parsed = JSON.parse(local);
-        if (parsed && Array.isArray(parsed.objects)) objects = parsed.objects;
+        if (parsed && Array.isArray(parsed.objects) && parsed.objects.length > 0) {
+          objects = parsed.objects;
+        }
       } catch (e) {}
     }
   }
 
-  const objectsToDraw = objects || DEFAULT_COORDINATES;
+  const objectsToDraw = objects && objects.length > 0 ? objects : DEFAULT_COORDINATES;
 
-  // 4. วาดตัวแปรข้อความทุกตัวตามพิกัดที่เซฟไว้
+  // 5. วาดตัวแปรข้อความทุกตัวตามพิกัดที่เซฟไว้
   objectsToDraw.forEach((obj) => {
-    let text = obj.text || "";
-    text = text
+    let rawText = obj.text || "";
+
+    // แทนค่าตัวแปร
+    let text = rawText
       .replace(/\{\{NAME\}\}/g, name || "")
       .replace(/\{\{CERT_NO\}\}/g, certNo || "")
       .replace(/\{\{SCHOOL\}\}/g, school || "เบญจมราชรังสฤษฎิ์ ๒")
       .replace(/\{\{ACTIVITY\}\}/g, activity || "")
       .replace(/\{\{YEAR\}\}/g, String(year || "2569"));
 
-    const fontSize = Math.round((obj.fontSize || 22) * scale);
+    // Fallback ถ้าไม่มี {{}} แต่เป็นชื่อตัวแปรเดี่ยวๆ
+    if (text === rawText) {
+      if (rawText.toUpperCase().includes("NAME")) text = name || "";
+      if (rawText.toUpperCase().includes("CERT")) text = certNo || "";
+    }
+
+    if (!text.trim()) return;
+
+    const fontSize = Math.round((obj.fontSize || 26) * scale);
     const fontFamily = obj.fontFamily || "Prompt";
-    const fill = typeof obj.fill === "string" ? obj.fill : "#C0392B";
+    const fill = typeof obj.fill === "string" ? obj.fill : "#0D47A1";
     const textAlign = obj.textAlign || "left";
     const fontWeight = obj.fontWeight || "normal";
 
@@ -119,7 +134,7 @@ export async function generateCertificateUrl({
 
     const y = (obj.top || 0) * scale + fontSize * 0.85;
 
-    ctx.font = `${fontWeight} ${fontSize}px '${fontFamily}', 'Sarabun', 'Prompt', sans-serif`;
+    ctx.font = `${fontWeight} ${fontSize}px '${fontFamily}', 'Prompt', 'Sarabun', sans-serif`;
     ctx.fillStyle = fill;
     ctx.textAlign = textAlign;
     ctx.textBaseline = "alphabetic";
