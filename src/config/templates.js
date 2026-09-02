@@ -15,7 +15,7 @@ export const DEFAULT_COORDINATES = [
     width: 700,
     fontSize: 28,
     fontFamily: "Prompt",
-    fill: "#0D47A1",
+    fill: "#C0392B", // เปลี่ยนเป็นสีแดงตามที่ออกแบบไว้
     textAlign: "center",
     fontWeight: "bold",
   },
@@ -44,7 +44,7 @@ export const ACTIVITY_TEMPLATES = {
       width: 700,
       fontSize: 28,
       fontFamily: "Prompt",
-      fill: "#0D47A1",
+      fill: "#C0392B", // เปลี่ยนเป็นสีแดง
       textAlign: "center",
       fontWeight: "bold",
     },
@@ -70,7 +70,7 @@ export const ACTIVITY_TEMPLATES = {
       width: 700,
       fontSize: 28,
       fontFamily: "Prompt",
-      fill: "#7C2D12",
+      fill: "#C0392B", // เปลี่ยนเป็นสีแดง
       textAlign: "center",
       fontWeight: "bold",
     },
