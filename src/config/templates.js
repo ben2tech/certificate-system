@@ -97,11 +97,6 @@ export function getCoordinatesForActivity(activity = "", prefix = "") {
   const a = String(activity || "").trim().toLowerCase();
 
   if (p && ACTIVITY_TEMPLATES[p]) return ACTIVITY_TEMPLATES[p];
-  if (a && ACTIVITY_TEMPLATES[a]) return ACTIVITY_TEMPLATES[a];
-
-  if (a.includes("sci") || a.includes("วิทย์")) return ACTIVITY_TEMPLATES.sci2569 || DEFAULT_COORDINATES;
-  if (a.includes("soc") || a.includes("สังคม")) return ACTIVITY_TEMPLATES.social69 || DEFAULT_COORDINATES;
-
   return DEFAULT_COORDINATES;
 }
 
@@ -114,8 +109,5 @@ export function getBackgroundUrl(activity = "", prefix = "") {
 
   const v = "?v=2"; // Cache buster
   if (p) return `${normalizedBase}cer/${p}.png${v}`;
-  if (a.includes("sci") || a.includes("วิทย์")) return `${normalizedBase}cer/sci2569.png${v}`;
-  if (a.includes("soc") || a.includes("สังคม")) return `${normalizedBase}cer/social69.png${v}`;
-  if (a) return `${normalizedBase}cer/${a}.png${v}`;
   return `${normalizedBase}cer/cert.png${v}`; // เปลี่ยนค่าเริ่มต้นเป็น cert.png
 }
