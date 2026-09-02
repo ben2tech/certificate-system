@@ -19,6 +19,10 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   Save,
@@ -29,6 +33,8 @@ import {
   UploadFile,
   Delete,
   CenterFocusStrong,
+  Code,
+  ContentCopy,
 } from "@mui/icons-material";
 import AdminLayout from "../components/AdminLayout";
 import { postGAS, getFromGAS } from "../../services/api";
@@ -54,6 +60,40 @@ export default function TemplateDesigner() {
   const [customFonts, setCustomFonts] = useState([]);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
+  const [codePreview, setCodePreview] = useState(null);
+  const [codeOpen, setCodeOpen] = useState(false);
+
+  function handleShowCode() {
+    if (!fabricRef.current) return;
+    const objects = fabricRef.current.getObjects().map((o) => ({
+      type: o.type,
+      text: o.text,
+      left: Math.round(o.left),
+      top: Math.round(o.top),
+      width: Math.round(o.width),
+      fontSize: o.fontSize,
+      fontFamily: o.fontFamily,
+      fill: o.fill,
+      textAlign: o.textAlign || "left",
+      fontWeight: o.fontWeight || "normal",
+    }));
+
+    const codeStr = `${currentPrefix}: [\n` + objects.map(o => `    {
+      type: "textbox",
+      text: "${o.text}",
+      left: ${o.left},
+      top: ${o.top},
+      width: ${o.width},
+      fontSize: ${o.fontSize},
+      fontFamily: "${o.fontFamily}",
+      fill: "${o.fill}",
+      textAlign: "${o.textAlign}",
+      fontWeight: "${o.fontWeight}",
+    }`).join(",\n") + `\n  ],`;
+
+    setCodePreview(codeStr);
+    setCodeOpen(true);
+  }
 
   // อัปเดต object ที่กำลังเลือก
   function updateActiveObject(props) {
@@ -290,16 +330,27 @@ export default function TemplateDesigner() {
               ลากวางตัวแปรข้อความ ปรับขนาดฟอนต์ สี และจัดตำแหน่งตามต้องการ
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <Save />}
-            disabled={saving}
-            onClick={handleSave}
-            sx={{ fontWeight: 700, px: 3.5, background: "linear-gradient(135deg, #10B981, #059669)" }}
-          >
-            {saving ? "กำลังบันทึก..." : "บันทึก TEMPLATE"}
-          </Button>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              size="large"
+              startIcon={<Code />}
+              onClick={handleShowCode}
+              sx={{ fontWeight: 700, px: 3.5, borderColor: "#10B981", color: "#10B981", "&:hover": { borderColor: "#059669", backgroundColor: "rgba(16, 185, 129, 0.04)" } }}
+            >
+              แสดงโค้ดพิกัด
+            </Button>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <Save />}
+              disabled={saving}
+              onClick={handleSave}
+              sx={{ fontWeight: 700, px: 3.5, background: "linear-gradient(135deg, #10B981, #059669)" }}
+            >
+              {saving ? "กำลังบันทึก..." : "บันทึก TEMPLATE"}
+            </Button>
+          </Stack>
         </Stack>
 
         <Stack direction={{ xs: "column", lg: "row" }} spacing={3}>
@@ -465,6 +516,47 @@ export default function TemplateDesigner() {
             {toast.message}
           </Alert>
         </Snackbar>
+
+        <Dialog open={codeOpen} onClose={() => setCodeOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle sx={{ fontWeight: 700, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Box>โค้ดพิกัดสำหรับ templates.js</Box>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<ContentCopy />}
+              onClick={() => {
+                navigator.clipboard.writeText(codePreview);
+                setToast({ open: true, message: "คัดลอกโค้ดเรียบร้อย!", severity: "success" });
+              }}
+            >
+              คัดลอก
+            </Button>
+          </DialogTitle>
+          <DialogContent dividers>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              คุณสามารถนำโค้ดด้านล่างนี้ไปวางทับในไฟล์ <strong>src/config/templates.js</strong> ในส่วนของ <strong>ACTIVITY_TEMPLATES</strong> ได้เลยครับ
+            </Typography>
+            <Box
+              component="pre"
+              sx={{
+                p: 2,
+                bgcolor: "#1E293B",
+                color: "#E2E8F0",
+                borderRadius: 2,
+                overflowX: "auto",
+                fontFamily: "monospace",
+                fontSize: 14,
+              }}
+            >
+              {codePreview}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCodeOpen(false)} sx={{ fontWeight: 700 }}>
+              ปิด
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </AdminLayout>
   );
