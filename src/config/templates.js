@@ -112,9 +112,10 @@ export function getBackgroundUrl(activity = "", prefix = "") {
   const p = String(prefix || "").trim().toLowerCase();
   const a = String(activity || "").trim().toLowerCase();
 
-  if (p) return `${normalizedBase}cer/${p}.png`;
-  if (a.includes("sci") || a.includes("วิทย์")) return `${normalizedBase}cer/sci2569.png`;
-  if (a.includes("soc") || a.includes("สังคม")) return `${normalizedBase}cer/social69.png`;
-  if (a) return `${normalizedBase}cer/${a}.png`;
-  return `${normalizedBase}cer/sci2569.png`;
+  const v = "?v=2"; // Cache buster
+  if (p) return `${normalizedBase}cer/${p}.png${v}`;
+  if (a.includes("sci") || a.includes("วิทย์")) return `${normalizedBase}cer/sci2569.png${v}`;
+  if (a.includes("soc") || a.includes("สังคม")) return `${normalizedBase}cer/social69.png${v}`;
+  if (a) return `${normalizedBase}cer/${a}.png${v}`;
+  return `${normalizedBase}cer/sci2569.png${v}`;
 }
