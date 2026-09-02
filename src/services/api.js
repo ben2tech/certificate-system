@@ -80,6 +80,7 @@ export async function searchStudent(studentId) {
             certNo: item.certNo || "",
             studentId: item.studentId,
             year: item.year,
+            prefix: item.template || item.prefix || "",
           });
         });
         return { success: true, data: grouped };

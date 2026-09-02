@@ -205,7 +205,7 @@ export default function Search() {
                             activity={c.activity}
                             year={c.year}
                             certNo={c.certNo}
-                            prefix={c.prefix || c.activity || "sci2569"}
+                            prefix={c.prefix || c.template || c.activity || "sci2569"}
                           />
                         </Box>
                       </Box>
