@@ -6,32 +6,32 @@
 
 // พิกัดมาตรฐานสำหรับเกียรติบัตร (บน Canvas ขนาด 1123 x 794 px)
 // ภาพพื้นหลังมีข้อความกิจกรรมและโรงเรียนพิมพ์ไว้อยู่แล้ว จึงวาดเฉพาะชื่อและเลขที่ เพื่อไม่ให้ทับซ้อน
-export const DEFAULT_COORDINATES = [
-  {
-    type: "textbox",
-    text: "{{NAME}}",
-    left: 211,
-    top: 320,
-    width: 700,
-    fontSize: 28,
-    fontFamily: "Prompt",
-    fill: "#C0392B", // เปลี่ยนเป็นสีแดงตามที่ออกแบบไว้
-    textAlign: "center",
-    fontWeight: "bold",
-  },
-  {
-    type: "textbox",
-    text: "{{CERT_NO}}",
-    left: 925,
-    top: 56,
-    width: 150,
-    fontSize: 14,
-    fontFamily: "Sarabun",
-    fill: "#1E293B",
-    textAlign: "left",
-    fontWeight: "normal",
-  },
-];
+sci2569: [
+    {
+      type: "textbox",
+      text: "{{NAME}}",
+      left: 346,
+      top: 325,
+      width: 450,
+      fontSize: 26,
+      fontFamily: "Sarabun",
+      fill: "#080684",
+      textAlign: "center",
+      fontWeight: "bold",
+    },
+    {
+      type: "textbox",
+      text: "{{CERT_NO}}",
+      left: 942,
+      top: 61,
+      width: 200,
+      fontSize: 14,
+      fontFamily: "Sarabun",
+      fill: "#000000",
+      textAlign: "left",
+      fontWeight: "normal",
+    }
+  ],
 
 // พิกัดเฉพาะสำหรับแต่ละกิจกรรม
 export const ACTIVITY_TEMPLATES = {
