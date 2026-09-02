@@ -32,22 +32,25 @@ export async function generateCertificateUrl({
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = bgUrl;
-    await new Promise((resolve) => {
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve();
-      };
-      img.onerror = () => {
-        const fallback = new Image();
-        fallback.crossOrigin = "anonymous";
-        fallback.src = getBackgroundUrl("sci2569");
-        fallback.onload = () => {
-          ctx.drawImage(fallback, 0, 0, canvas.width, canvas.height);
+    await Promise.race([
+      new Promise((resolve) => {
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           resolve();
         };
-        fallback.onerror = () => resolve();
-      };
-    });
+        img.onerror = () => {
+          const fallback = new Image();
+          fallback.crossOrigin = "anonymous";
+          fallback.src = getBackgroundUrl("sci2569");
+          fallback.onload = () => {
+            ctx.drawImage(fallback, 0, 0, canvas.width, canvas.height);
+            resolve();
+          };
+          fallback.onerror = () => resolve();
+        };
+      }),
+      new Promise((resolve) => setTimeout(resolve, 5000)) // 5 seconds timeout
+    ]);
   } catch (e) {
     console.warn("BG Load notice:", e);
   }
@@ -55,10 +58,15 @@ export async function generateCertificateUrl({
   // 3. โหลดฟอนต์ Prompt และ Sarabun ให้พร้อมก่อนวาดเสมอ
   try {
     if (document.fonts) {
-      await Promise.allSettled([
+      const fontPromise = Promise.allSettled([
         document.fonts.load("bold 40px 'Prompt'"),
         document.fonts.load("normal 20px 'Sarabun'"),
         document.fonts.ready,
+      ]);
+      // ใส่ Timeout 2 วินาที ป้องกันการค้าง
+      await Promise.race([
+        fontPromise,
+        new Promise((resolve) => setTimeout(resolve, 2000)),
       ]);
     }
   } catch (e) {}
@@ -171,12 +179,17 @@ export default function CertificateCanvas({
       certNo,
       prefix,
       templateJson,
-    }).then((res) => {
-      if (active) {
-        setUrl(res);
-        setLoading(false);
-      }
-    });
+    })
+      .then((res) => {
+        if (active) {
+          setUrl(res);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to generate certificate:", err);
+        if (active) setLoading(false);
+      });
 
     return () => {
       active = false;
