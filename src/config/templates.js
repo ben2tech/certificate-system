@@ -10,27 +10,27 @@ export const DEFAULT_COORDINATES = [
   {
     type: "textbox",
     text: "{{NAME}}",
-    left: 211,
-    top: 320,
-    width: 700,
-    fontSize: 28,
-    fontFamily: "Prompt",
-    fill: "#C0392B", // เปลี่ยนเป็นสีแดงตามที่ออกแบบไว้
+    left: 346,
+    top: 325,
+    width: 450,
+    fontSize: 26,
+    fontFamily: "Sarabun",
+    fill: "#080684",
     textAlign: "center",
     fontWeight: "bold",
   },
   {
     type: "textbox",
     text: "{{CERT_NO}}",
-    left: 925,
-    top: 56,
-    width: 150,
+    left: 942,
+    top: 61,
+    width: 200,
     fontSize: 14,
     fontFamily: "Sarabun",
-    fill: "#1E293B",
+    fill: "#000000",
     textAlign: "left",
     fontWeight: "normal",
-  },
+  }
 ];
 
 // พิกัดเฉพาะสำหรับแต่ละกิจกรรม
