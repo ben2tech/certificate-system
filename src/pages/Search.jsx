@@ -160,7 +160,6 @@ export default function Search() {
               {certList.length > 0 ? (
                 <Stack spacing={4}>
                   {certList.map((c, i) => {
-                    const matchTpl = findMatchingTemplate(c);
                     return (
                       <Box
                         key={i}
