@@ -21,7 +21,7 @@ import {
   ErrorOutline,
 } from "@mui/icons-material";
 
-import { searchStudent, getFromGAS } from "../services/api";
+import { searchStudent } from "../services/api";
 import CertificateCanvas from "../components/CertificateCanvas";
 
 export default function Search() {
@@ -29,43 +29,6 @@ export default function Search() {
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [result, setResult] = useState(null);
-  const [templates, setTemplates] = useState([]);
-
-  // โหลด Templates ล่าสุดจาก Google Apps Script
-  useEffect(() => {
-    getFromGAS({ action: "templates" })
-      .then((res) => {
-        if (res && res.data) setTemplates(res.data);
-      })
-      .catch((e) => console.warn("Template fetch notice:", e));
-  }, []);
-
-  function findMatchingTemplate(c) {
-    if (!templates || templates.length === 0) return null;
-    const certAct = String(c?.activity || "").trim().toLowerCase();
-    const certNo = String(c?.certNo || "").trim().toLowerCase();
-
-    // 1. Exact match
-    let m = templates.find((t) => {
-      const act = String(t?.activity || "").trim().toLowerCase();
-      const pfx = String(t?.prefix || "").trim().toLowerCase();
-      return (act && act === certAct) || (pfx && (pfx === certAct || certNo.includes(pfx)));
-    });
-    if (m) return m;
-
-    // 2. Keyword match
-    m = templates.find((t) => {
-      const act = String(t?.activity || "").trim().toLowerCase();
-      const pfx = String(t?.prefix || "").trim().toLowerCase();
-      if ((certAct.includes("วิทย์") || certNo.includes("sci")) && (pfx.includes("sci") || act.includes("วิทย์"))) return true;
-      if ((certAct.includes("สังคม") || certNo.includes("soc")) && (pfx.includes("soc") || act.includes("สังคม"))) return true;
-      return false;
-    });
-    if (m) return m;
-
-    // 3. ตัวแรกที่มี json
-    return templates.find((t) => t.json && t.json.trim() !== "" && t.json.trim() !== "{}") || templates[0] || null;
-  }
 
   async function handleSearch() {
     if (!studentId.trim()) {
@@ -75,11 +38,7 @@ export default function Search() {
 
     setLoading(true);
     try {
-      const [res, tplRes] = await Promise.all([
-        searchStudent(studentId.trim()),
-        getFromGAS({ action: "templates" }).catch(() => null),
-      ]);
-      if (tplRes && tplRes.data) setTemplates(tplRes.data);
+      const res = await searchStudent(studentId.trim());
       setResult(res.data || {});
     } catch {
       alert("ค้นหาไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
@@ -247,8 +206,7 @@ export default function Search() {
                             activity={c.activity}
                             year={c.year}
                             certNo={c.certNo}
-                            prefix={matchTpl?.prefix || "sci2569"}
-                            templateJson={matchTpl?.json || null}
+                            prefix={c.prefix || c.activity || "sci2569"}
                           />
                         </Box>
                       </Box>

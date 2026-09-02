@@ -32,7 +32,7 @@ import {
 } from "@mui/icons-material";
 import AdminLayout from "../components/AdminLayout";
 import { postGAS, getFromGAS } from "../../services/api";
-import { getBackgroundUrl, DEFAULT_COORDINATES } from "../../config/templates";
+import { getBackgroundUrl, DEFAULT_COORDINATES, getCoordinatesForActivity } from "../../config/templates";
 
 const SYSTEM_FONTS = ["Prompt", "Sarabun", "Kanit", "Chakra Petch", "Mitr", "TH Sarabun New", "sans-serif"];
 
@@ -123,8 +123,9 @@ export default function TemplateDesigner() {
         }
       }
 
-      // ถ้ายังไม่มีเลย ให้ใช้ DEFAULT_COORDINATES
-      const objectsToRender = savedObjects || DEFAULT_COORDINATES;
+      // ถ้ายังไม่มีเลย ให้ใช้พิกัดตามกิจกรรมหรือ DEFAULT_COORDINATES
+      const objectsToRender =
+        savedObjects || getCoordinatesForActivity(currentActivity, currentPrefix);
 
       if (isMounted) {
         objectsToRender.forEach((obj) => {

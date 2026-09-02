@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Box, CircularProgress, Button, Stack } from "@mui/material";
 import { Image as ImageIcon, PictureAsPdf } from "@mui/icons-material";
 import { jsPDF } from "jspdf";
-import { getBackgroundUrl, DEFAULT_COORDINATES } from "../config/templates";
+import { getBackgroundUrl, DEFAULT_COORDINATES, getCoordinatesForActivity } from "../config/templates";
 
 /**
  * ฟังก์ชันสร้าง DataURL ของเกียรติบัตรบน HTML5 Canvas
@@ -93,7 +93,8 @@ export async function generateCertificateUrl({
     }
   }
 
-  const objectsToDraw = objects && objects.length > 0 ? objects : DEFAULT_COORDINATES;
+  const objectsToDraw =
+    objects && objects.length > 0 ? objects : getCoordinatesForActivity(activity, prefix);
 
   // 5. วาดตัวแปรข้อความทุกตัวตามพิกัด 1:1 กับ Fabric.js
   objectsToDraw.forEach((obj) => {
