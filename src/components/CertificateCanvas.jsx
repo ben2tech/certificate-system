@@ -41,7 +41,7 @@ export async function generateCertificateUrl({
         img.onerror = () => {
           const fallback = new Image();
           fallback.crossOrigin = "anonymous";
-          fallback.src = getBackgroundUrl("sci2569");
+          fallback.src = getBackgroundUrl("cert"); // เปลี่ยน fallback ตอน Error เป็น cert.png
           fallback.onload = () => {
             ctx.drawImage(fallback, 0, 0, canvas.width, canvas.height);
             resolve();

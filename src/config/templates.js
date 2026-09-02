@@ -117,5 +117,5 @@ export function getBackgroundUrl(activity = "", prefix = "") {
   if (a.includes("sci") || a.includes("วิทย์")) return `${normalizedBase}cer/sci2569.png${v}`;
   if (a.includes("soc") || a.includes("สังคม")) return `${normalizedBase}cer/social69.png${v}`;
   if (a) return `${normalizedBase}cer/${a}.png${v}`;
-  return `${normalizedBase}cer/sci2569.png${v}`;
+  return `${normalizedBase}cer/cert.png${v}`; // เปลี่ยนค่าเริ่มต้นเป็น cert.png
 }
