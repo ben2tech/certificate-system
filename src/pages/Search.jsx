@@ -21,7 +21,7 @@ import {
   ErrorOutline,
 } from "@mui/icons-material";
 
-import { searchStudent } from "../services/api";
+import { searchStudent, getFromGAS } from "../services/api";
 import CertificateCanvas from "../components/CertificateCanvas";
 
 export default function Search() {
@@ -29,6 +29,16 @@ export default function Search() {
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [result, setResult] = useState(null);
+  const [dynamicTemplates, setDynamicTemplates] = useState([]);
+
+  useEffect(() => {
+    // โหลด mapping ของกิจกรรมและ prefix จากฐานข้อมูลมาเก็บไว้
+    getFromGAS({ action: "templates" }).then(res => {
+      if (res && res.data) {
+        setDynamicTemplates(res.data);
+      }
+    }).catch(console.error);
+  }, []);
 
   async function handleSearch() {
     if (!studentId.trim()) {
@@ -199,14 +209,23 @@ export default function Search() {
 
                         {/* เกียรติบัตร */}
                         <Box sx={{ maxWidth: 640, mx: "auto" }}>
-                          <CertificateCanvas
-                            name={c.name}
-                            school={c.school}
-                            activity={c.activity}
-                            year={c.year}
-                            certNo={c.certNo}
-                            prefix={c.prefix || c.template || ""}
-                          />
+                          {(() => {
+                            const matchedTemplate = dynamicTemplates.find(t => String(t.activity).trim() === String(c.activity).trim());
+                            const finalPrefix = c.prefix || c.template || (matchedTemplate ? matchedTemplate.prefix : "");
+                            const finalJson = matchedTemplate ? matchedTemplate.json : null;
+                            
+                            return (
+                              <CertificateCanvas
+                                name={c.name}
+                                school={c.school}
+                                activity={c.activity}
+                                year={c.year}
+                                certNo={c.certNo}
+                                prefix={finalPrefix}
+                                templateJson={finalJson}
+                              />
+                            );
+                          })()}
                         </Box>
                       </Box>
                     );
