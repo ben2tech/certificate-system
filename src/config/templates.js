@@ -4,14 +4,15 @@
  * สามารถกำหนดและปรับแต่งพิกัดได้ที่นี่โดยตรง ไม่ต้องกำหนดใน Google Sheets
  */
 
-// พิกัดมาตรฐานสำหรับกิจกรรมทั่วไป (บน Canvas ขนาด 1123 x 794 px)
+// พิกัดมาตรฐานสำหรับเกียรติบัตร (บน Canvas ขนาด 1123 x 794 px)
+// ภาพพื้นหลังมีข้อความกิจกรรมและโรงเรียนพิมพ์ไว้อยู่แล้ว จึงวาดเฉพาะชื่อและเลขที่ เพื่อไม่ให้ทับซ้อน
 export const DEFAULT_COORDINATES = [
   {
     type: "textbox",
     text: "{{NAME}}",
-    left: 261,
-    top: 365,
-    width: 600,
+    left: 211,
+    top: 320,
+    width: 700,
     fontSize: 28,
     fontFamily: "Prompt",
     fill: "#0D47A1",
@@ -20,51 +21,27 @@ export const DEFAULT_COORDINATES = [
   },
   {
     type: "textbox",
-    text: "{{ACTIVITY}}",
-    left: 261,
-    top: 435,
-    width: 600,
-    fontSize: 20,
-    fontFamily: "Prompt",
-    fill: "#1E293B",
-    textAlign: "center",
-    fontWeight: "normal",
-  },
-  {
-    type: "textbox",
-    text: "{{SCHOOL}}",
-    left: 261,
-    top: 485,
-    width: 600,
-    fontSize: 18,
-    fontFamily: "Sarabun",
-    fill: "#475569",
-    textAlign: "center",
-    fontWeight: "normal",
-  },
-  {
-    type: "textbox",
     text: "{{CERT_NO}}",
-    left: 850,
-    top: 55,
-    width: 220,
+    left: 925,
+    top: 56,
+    width: 150,
     fontSize: 14,
     fontFamily: "Sarabun",
-    fill: "#334155",
-    textAlign: "right",
+    fill: "#1E293B",
+    textAlign: "left",
     fontWeight: "normal",
   },
 ];
 
-// พิกัดเฉพาะสำหรับแต่ละกิจกรรม (หากต้องการแยกเลย์เอาต์พิเศษ)
+// พิกัดเฉพาะสำหรับแต่ละกิจกรรม
 export const ACTIVITY_TEMPLATES = {
   sci2569: [
     {
       type: "textbox",
       text: "{{NAME}}",
-      left: 261,
-      top: 370,
-      width: 600,
+      left: 211,
+      top: 320,
+      width: 700,
       fontSize: 28,
       fontFamily: "Prompt",
       fill: "#0D47A1",
@@ -74,13 +51,13 @@ export const ACTIVITY_TEMPLATES = {
     {
       type: "textbox",
       text: "{{CERT_NO}}",
-      left: 850,
-      top: 60,
-      width: 220,
+      left: 925,
+      top: 56,
+      width: 150,
       fontSize: 14,
       fontFamily: "Sarabun",
       fill: "#1E293B",
-      textAlign: "right",
+      textAlign: "left",
       fontWeight: "normal",
     },
   ],
@@ -88,9 +65,9 @@ export const ACTIVITY_TEMPLATES = {
     {
       type: "textbox",
       text: "{{NAME}}",
-      left: 261,
-      top: 370,
-      width: 600,
+      left: 211,
+      top: 320,
+      width: 700,
       fontSize: 28,
       fontFamily: "Prompt",
       fill: "#7C2D12",
@@ -100,13 +77,13 @@ export const ACTIVITY_TEMPLATES = {
     {
       type: "textbox",
       text: "{{CERT_NO}}",
-      left: 850,
-      top: 60,
-      width: 220,
+      left: 925,
+      top: 56,
+      width: 150,
       fontSize: 14,
       fontFamily: "Sarabun",
       fill: "#1E293B",
-      textAlign: "right",
+      textAlign: "left",
       fontWeight: "normal",
     },
   ],
